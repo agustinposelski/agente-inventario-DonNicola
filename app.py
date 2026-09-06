@@ -17,7 +17,7 @@ MODEL = "gpt-5.6-terra"
 CATEGORIES = [
     "Electricidad",
     "Sanitarios",
-    "Pintura",
+    "Pinturería",
     "Herramientas",
     "Seguridad",
     "Jardín",
@@ -544,7 +544,12 @@ def cargar_precios() -> pd.DataFrame:
         "precio_confianza": "Confianza",
         "precio_actualizado_en": "Precio actualizado",
     }
-    return pd.DataFrame(respuesta.data).rename(columns=columnas)
+    tabla = pd.DataFrame(respuesta.data).rename(columns=columnas)
+    if "Categoría" in tabla.columns:
+        tabla["Categoría"] = tabla["Categoría"].replace(
+            {"Pintura": "Pinturería"}
+        )
+    return tabla
 
 
 def cargar_historial() -> tuple[list[dict], list[dict]]:
@@ -652,7 +657,12 @@ def cargar_inventario() -> pd.DataFrame:
         "precio_referencia": "Precio de referencia",
         "actualizado_en": "Última actualización",
     }
-    return pd.DataFrame(respuesta.data).rename(columns=columnas)
+    tabla = pd.DataFrame(respuesta.data).rename(columns=columnas)
+    if "Categoría" in tabla.columns:
+        tabla["Categoría"] = tabla["Categoría"].replace(
+            {"Pintura": "Pinturería"}
+        )
+    return tabla
 
 
 st.set_page_config(
@@ -665,6 +675,7 @@ st.set_page_config(
 st.markdown(
     """
     <style>
+    @import url('https://fonts.googleapis.com/css2?family=Bree+Serif&display=swap');
     :root {
         --dn-ink: #263548;
         --dn-burgundy: #5B3035;
@@ -724,11 +735,11 @@ st.markdown(
     }
     .dn-hero h1 {
         color: var(--dn-coral);
-        font-family: Georgia, "Times New Roman", serif;
+        font-family: "Bree Serif", "Cooper Black", "Bookman Old Style", Georgia, serif;
         font-size: clamp(2.25rem, 5.2vw, 4.65rem);
-        font-weight: 900;
+        font-weight: 400;
         line-height: .94;
-        letter-spacing: .02em;
+        letter-spacing: .055em;
         text-transform: uppercase;
         -webkit-text-stroke: 2px var(--dn-ink);
         text-shadow: 3px 3px 0 rgba(255,255,255,.72);
@@ -1323,6 +1334,10 @@ with tab_historial:
                         tabla_detalle = tabla_detalle.drop(
                             columns=["carga_id"], errors="ignore"
                         )
+                        if "Categoría" in tabla_detalle.columns:
+                            tabla_detalle["Categoría"] = tabla_detalle[
+                                "Categoría"
+                            ].replace({"Pintura": "Pinturería"})
                         st.dataframe(
                             tabla_detalle,
                             use_container_width=True,
