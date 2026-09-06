@@ -523,7 +523,7 @@ def cargar_precios() -> pd.DataFrame:
         cliente_supabase()
         .table("inventario")
         .select(
-            "id,producto,categoria,medida,variante,precio_min,"
+            "id,producto,categoria,medida,variante,cantidad,precio_min,"
             "precio_referencia,precio_max,moneda,fuentes_precio,"
             "precio_confianza,precio_actualizado_en"
         )
@@ -536,6 +536,7 @@ def cargar_precios() -> pd.DataFrame:
         "categoria": "Categoría",
         "medida": "Medida",
         "variante": "Variante",
+        "cantidad": "Cantidad",
         "precio_min": "Precio mínimo",
         "precio_referencia": "Precio referencia",
         "precio_max": "Precio máximo",
@@ -1097,6 +1098,58 @@ with tab_precios:
                 "Buscá precios online o completá manualmente la mediana. "
                 "Cada búsqueda online utiliza crédito de la API."
             )
+
+            cantidades = pd.to_numeric(
+                precios["Cantidad"], errors="coerce"
+            ).fillna(0)
+            referencias = pd.to_numeric(
+                precios["Precio referencia"], errors="coerce"
+            )
+            precios["Valor del inventario"] = (
+                cantidades * referencias.fillna(0)
+            )
+            con_precio = referencias.notna() & referencias.gt(0)
+            valor_total = float(precios["Valor del inventario"].sum())
+            productos_valorizados = int(con_precio.sum())
+            productos_sin_precio = int((~con_precio).sum())
+
+            valor_col, valorizados_col, pendientes_col = st.columns(3)
+            valor_col.metric(
+                "Valor total del inventario",
+                formatear_ars(valor_total),
+                help="Cantidad × precio de referencia de cada producto.",
+            )
+            valorizados_col.metric(
+                "Productos valorizados",
+                f"{productos_valorizados} de {len(precios)}",
+            )
+            pendientes_col.metric(
+                "Productos sin precio",
+                productos_sin_precio,
+            )
+
+            valor_por_categoria = (
+                precios.groupby("Categoría", dropna=False)["Valor del inventario"]
+                .sum()
+                .sort_values(ascending=False)
+            )
+            valor_por_categoria = valor_por_categoria[
+                valor_por_categoria > 0
+            ].rename("Valor en ARS")
+            if not valor_por_categoria.empty:
+                st.markdown("#### Valor del inventario por categoría")
+                st.caption(
+                    "Muestra en qué rubros está concentrado el mayor valor."
+                )
+                st.bar_chart(
+                    valor_por_categoria,
+                    color="#D97771",
+                    height=280,
+                )
+            else:
+                st.info(
+                    "Agregá precios de referencia para ver el valor por categoría."
+                )
 
             ultimos = st.session_state.get("ultimos_precios", [])
             if ultimos:
