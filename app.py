@@ -821,6 +821,32 @@ st.markdown(
         border-radius: 10px;
         box-shadow: 5px 5px 0 rgba(241,228,92,.38);
     }
+    [data-testid="stFileUploader"] {
+        padding: 1rem;
+        background: white;
+        border: 2px solid var(--dn-ink);
+        border-radius: 12px;
+        box-shadow: 5px 5px 0 rgba(241,228,92,.55);
+    }
+    [data-testid="stFileUploaderDropzone"] {
+        min-height: 190px;
+        display: flex;
+        align-items: center;
+        border: 3px dashed var(--dn-coral);
+        border-radius: 10px;
+        background:
+            linear-gradient(135deg, rgba(241,228,92,.28), rgba(255,255,255,.96));
+    }
+    [data-testid="stFileUploaderDropzone"]:hover {
+        border-color: var(--dn-burgundy);
+        background: rgba(241,228,92,.38);
+    }
+    [data-testid="stFileUploaderDropzone"] button {
+        border: 2px solid var(--dn-ink);
+        background: var(--dn-coral);
+        color: white;
+        font-weight: 800;
+    }
     .stButton > button, .stDownloadButton > button {
         min-height: 42px;
         border: 2px solid var(--dn-ink);
@@ -896,7 +922,7 @@ with tab_carga:
         unsafe_allow_html=True,
     )
     archivos = st.file_uploader(
-        "Subí una o varias imágenes del inventario",
+        "Arrastrá y soltá aquí una o varias imágenes del inventario",
         type=["png", "jpg", "jpeg", "webp"],
         accept_multiple_files=True,
     )
