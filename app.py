@@ -757,9 +757,12 @@ st.markdown(
         --dn-cream: #FFFDF0;
         --dn-white: #FFFFFF;
     }
-    .stApp {
-        background: #FFFFFF;
-        background-image: none;
+    .stApp,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stMain"],
+    .main {
+        background: #FFFFFF !important;
+        background-image: none !important;
         color: var(--dn-ink);
     }
     [data-testid="stHeader"] {
@@ -845,7 +848,7 @@ st.markdown(
     }
     [data-testid="stTabs"] [data-baseweb="tab-list"] {
         gap: .45rem;
-        background: var(--dn-yellow);
+        background: #FFFFFF;
         padding: .5rem;
         border: 3px solid var(--dn-ink);
         border-radius: 12px;
@@ -893,7 +896,7 @@ st.markdown(
     [data-testid="stMetric"] {
         min-height: 112px;
         padding: 1rem 1.1rem;
-        background: white;
+        background: #FFFFFF;
         border: 2px solid var(--dn-ink);
         border-top: 8px solid var(--dn-coral);
         border-radius: 9px;
@@ -949,12 +952,11 @@ st.markdown(
         align-items: center;
         border: 3px dashed var(--dn-coral);
         border-radius: 10px;
-        background:
-            linear-gradient(135deg, rgba(241,228,92,.28), rgba(255,255,255,.96));
+        background: #FFFFFF;
     }
     [data-testid="stFileUploaderDropzone"]:hover {
         border-color: var(--dn-burgundy);
-        background: rgba(241,228,92,.38);
+        background: #FFFFFF;
     }
     [data-testid="stFileUploaderDropzone"] button {
         border: 2px solid var(--dn-ink);
@@ -1280,10 +1282,43 @@ with tab_precios:
                 st.caption(
                     "Muestra en qué rubros está concentrado el mayor valor."
                 )
-                st.bar_chart(
-                    valor_por_categoria,
-                    color="#D97771",
-                    height=280,
+                grafico_categoria = valor_por_categoria.rename(
+                    "Valor en ARS"
+                ).reset_index()
+                st.vega_lite_chart(
+                    grafico_categoria,
+                    {
+                        "mark": {
+                            "type": "arc",
+                            "innerRadius": 52,
+                            "stroke": "#FFFFFF",
+                            "strokeWidth": 2,
+                        },
+                        "encoding": {
+                            "theta": {
+                                "field": "Valor en ARS",
+                                "type": "quantitative",
+                            },
+                            "color": {
+                                "field": "Categoría",
+                                "type": "nominal",
+                                "legend": {"title": "Categoría"},
+                            },
+                            "tooltip": [
+                                {
+                                    "field": "Categoría",
+                                    "type": "nominal",
+                                },
+                                {
+                                    "field": "Valor en ARS",
+                                    "type": "quantitative",
+                                    "title": "Valor de inventario",
+                                    "format": ",.2f",
+                                },
+                            ],
+                        },
+                    },
+                    use_container_width=True,
                 )
             else:
                 st.info(
