@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import os
 import re
 import unicodedata
@@ -135,6 +136,12 @@ def imagen_data_url(archivo) -> str:
     return f"data:{mime};base64,{contenido}"
 
 
+def huella_archivos(archivos) -> str:
+    huellas = sorted(hashlib.sha256(archivo.getvalue()).hexdigest() for archivo in archivos)
+    combinado = "|".join(huellas).encode("utf-8")
+    return hashlib.sha256(combinado).hexdigest()
+
+
 def interpretar_imagenes(archivos) -> pd.DataFrame:
     api_key = secreto("OPENAI_API_KEY")
     if not api_key:
@@ -211,41 +218,88 @@ def combinar_observaciones(anterior: str | None, nueva: str | None) -> str:
     return " | ".join(dict.fromkeys(partes))
 
 
-def guardar_lote(tabla: pd.DataFrame) -> None:
+def guardar_lote(tabla: pd.DataFrame, huella: str) -> None:
     db = cliente_supabase()
     ahora = datetime.now(timezone.utc).isoformat()
 
-    for _, fila in tabla.iterrows():
-        clave = clave_producto(fila)
-        actual = (
-            db.table("inventario")
-            .select("id,cantidad,observaciones")
-            .eq("clave", clave)
-            .limit(1)
+    duplicada = (
+        db.table("cargas_inventario")
+        .select("id")
+        .eq("huella", huella)
+        .eq("estado", "activa")
+        .limit(1)
+        .execute()
+    )
+    if duplicada.data:
+        raise ValueError(
+            "Este mismo grupo de imágenes ya fue confirmado anteriormente."
+        )
+
+    carga = (
+        db.table("cargas_inventario")
+        .insert({"huella": huella, "estado": "activa"})
+        .execute()
+    )
+    carga_id = int(carga.data[0]["id"])
+
+    try:
+        for _, fila in tabla.iterrows():
+            clave = clave_producto(fila)
+            actual = (
+                db.table("inventario")
+                .select("id,cantidad,observaciones")
+                .eq("clave", clave)
+                .limit(1)
+                .execute()
+            )
+            cantidad_nueva = float(fila["Cantidad"])
+            datos = {
+                "clave": clave,
+                "producto": str(fila["Producto"]).strip(),
+                "categoria": str(fila["Categoría"]).strip(),
+                "medida": str(fila["Medida"]).strip(),
+                "variante": str(fila["Variante"]).strip(),
+                "unidad": str(fila["Unidad"]).strip(),
+                "actualizado_en": ahora,
+            }
+
+            if actual.data:
+                registro = actual.data[0]
+                datos["cantidad"] = float(registro["cantidad"]) + cantidad_nueva
+                datos["observaciones"] = combinar_observaciones(
+                    registro.get("observaciones"), fila["Observaciones"]
+                )
+                (
+                    db.table("inventario")
+                    .update(datos)
+                    .eq("id", registro["id"])
+                    .execute()
+                )
+            else:
+                datos["cantidad"] = cantidad_nueva
+                datos["observaciones"] = str(fila["Observaciones"]).strip()
+                db.table("inventario").insert(datos).execute()
+
+            movimiento = {
+                "carga_id": carga_id,
+                "clave": clave,
+                "producto": datos["producto"],
+                "categoria": datos["categoria"],
+                "medida": datos["medida"],
+                "variante": datos["variante"],
+                "cantidad_agregada": cantidad_nueva,
+                "unidad": datos["unidad"],
+                "observaciones": str(fila["Observaciones"]).strip(),
+            }
+            db.table("movimientos_inventario").insert(movimiento).execute()
+    except Exception:
+        (
+            db.table("cargas_inventario")
+            .update({"estado": "error"})
+            .eq("id", carga_id)
             .execute()
         )
-        cantidad_nueva = float(fila["Cantidad"])
-        datos = {
-            "clave": clave,
-            "producto": str(fila["Producto"]).strip(),
-            "categoria": str(fila["Categoría"]).strip(),
-            "medida": str(fila["Medida"]).strip(),
-            "variante": str(fila["Variante"]).strip(),
-            "unidad": str(fila["Unidad"]).strip(),
-            "actualizado_en": ahora,
-        }
-
-        if actual.data:
-            registro = actual.data[0]
-            datos["cantidad"] = float(registro["cantidad"]) + cantidad_nueva
-            datos["observaciones"] = combinar_observaciones(
-                registro.get("observaciones"), fila["Observaciones"]
-            )
-            db.table("inventario").update(datos).eq("id", registro["id"]).execute()
-        else:
-            datos["cantidad"] = cantidad_nueva
-            datos["observaciones"] = str(fila["Observaciones"]).strip()
-            db.table("inventario").insert(datos).execute()
+        raise
 
 
 def actualizar_stock(tabla: pd.DataFrame) -> None:
@@ -267,6 +321,88 @@ def eliminar_productos(ids: list[int]) -> None:
     db = cliente_supabase()
     for identificador in ids:
         db.table("inventario").delete().eq("id", int(identificador)).execute()
+
+
+def cargar_historial() -> tuple[list[dict], list[dict]]:
+    db = cliente_supabase()
+    cargas = (
+        db.table("cargas_inventario")
+        .select("id,estado,creado_en,deshecho_en")
+        .order("creado_en", desc=True)
+        .execute()
+    )
+    movimientos = (
+        db.table("movimientos_inventario")
+        .select(
+            "carga_id,producto,categoria,medida,variante,"
+            "cantidad_agregada,unidad,observaciones"
+        )
+        .order("producto")
+        .execute()
+    )
+    return cargas.data, movimientos.data
+
+
+def deshacer_carga(carga_id: int) -> None:
+    db = cliente_supabase()
+    carga = (
+        db.table("cargas_inventario")
+        .select("id,estado")
+        .eq("id", carga_id)
+        .limit(1)
+        .execute()
+    )
+    if not carga.data or carga.data[0]["estado"] != "activa":
+        raise ValueError("Esta carga ya no está activa.")
+
+    movimientos = (
+        db.table("movimientos_inventario")
+        .select("clave,cantidad_agregada")
+        .eq("carga_id", carga_id)
+        .execute()
+    )
+
+    for movimiento in movimientos.data:
+        actual = (
+            db.table("inventario")
+            .select("id,cantidad")
+            .eq("clave", movimiento["clave"])
+            .limit(1)
+            .execute()
+        )
+        if not actual.data:
+            continue
+
+        registro = actual.data[0]
+        cantidad_restante = float(registro["cantidad"]) - float(
+            movimiento["cantidad_agregada"]
+        )
+        if cantidad_restante <= 0:
+            db.table("inventario").delete().eq("id", registro["id"]).execute()
+        else:
+            (
+                db.table("inventario")
+                .update(
+                    {
+                        "cantidad": cantidad_restante,
+                        "actualizado_en": datetime.now(timezone.utc).isoformat(),
+                    }
+                )
+                .eq("id", registro["id"])
+                .execute()
+            )
+
+    (
+        db.table("cargas_inventario")
+        .update(
+            {
+                "estado": "deshecha",
+                "deshecho_en": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+        .eq("id", carga_id)
+        .execute()
+    )
 
 
 def cargar_inventario() -> pd.DataFrame:
@@ -300,7 +436,9 @@ st.title("🧰 Inventario Don Nicola")
 if not autenticar():
     st.stop()
 
-tab_carga, tab_inventario = st.tabs(["Cargar imágenes", "Inventario acumulado"])
+tab_carga, tab_inventario, tab_historial = st.tabs(
+    ["Cargar imágenes", "Inventario acumulado", "Historial de cargas"]
+)
 
 with tab_carga:
     archivos = st.file_uploader(
@@ -315,6 +453,7 @@ with tab_carga:
         try:
             with st.spinner("Interpretando el inventario..."):
                 st.session_state["lote"] = interpretar_imagenes(archivos)
+                st.session_state["huella_lote"] = huella_archivos(archivos)
         except Exception as error:
             st.error(f"No se pudo interpretar el lote: {error}")
 
@@ -344,8 +483,12 @@ with tab_carga:
                     st.warning(error)
             else:
                 try:
-                    guardar_lote(editada)
+                    guardar_lote(
+                        editada,
+                        st.session_state.get("huella_lote", ""),
+                    )
                     del st.session_state["lote"]
+                    st.session_state.pop("huella_lote", None)
                     st.success("Lote incorporado correctamente.")
                     st.rerun()
                 except Exception as error:
@@ -438,3 +581,68 @@ with tab_inventario:
             )
     except Exception as error:
         st.info(f"No se pudo cargar o modificar el inventario: {error}")
+
+with tab_historial:
+    try:
+        cargas, movimientos = cargar_historial()
+        if not cargas:
+            st.info(
+                "El historial comenzará con la próxima carga que confirmes."
+            )
+        else:
+            for carga in cargas:
+                carga_id = int(carga["id"])
+                detalle = [
+                    movimiento
+                    for movimiento in movimientos
+                    if int(movimiento["carga_id"]) == carga_id
+                ]
+                fecha = pd.to_datetime(carga["creado_en"]).strftime(
+                    "%d/%m/%Y %H:%M UTC"
+                )
+                estado = str(carga["estado"]).capitalize()
+                titulo = (
+                    f"Carga #{carga_id} · {fecha} · "
+                    f"{len(detalle)} productos · {estado}"
+                )
+
+                with st.expander(titulo, expanded=False):
+                    if detalle:
+                        tabla_detalle = pd.DataFrame(detalle).rename(
+                            columns={
+                                "producto": "Producto",
+                                "categoria": "Categoría",
+                                "medida": "Medida",
+                                "variante": "Variante",
+                                "cantidad_agregada": "Cantidad agregada",
+                                "unidad": "Unidad",
+                                "observaciones": "Observaciones",
+                            }
+                        )
+                        tabla_detalle = tabla_detalle.drop(
+                            columns=["carga_id"], errors="ignore"
+                        )
+                        st.dataframe(
+                            tabla_detalle,
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+
+                    if carga["estado"] == "activa":
+                        confirmar = st.checkbox(
+                            "Confirmo que quiero deshacer esta carga",
+                            key=f"confirmar_deshacer_{carga_id}",
+                        )
+                        if st.button(
+                            "Deshacer carga",
+                            key=f"deshacer_{carga_id}",
+                            disabled=not confirmar,
+                        ):
+                            deshacer_carga(carga_id)
+                            st.success(
+                                "Carga deshecha y cantidades descontadas."
+                            )
+                            st.rerun()
+    except Exception as error:
+        st.info(f"No se pudo cargar el historial: {error}")
+
