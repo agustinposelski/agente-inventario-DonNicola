@@ -686,20 +686,16 @@ st.markdown(
         --dn-white: #FFFFFF;
     }
     .stApp {
-        background-color: #E8DC87;
+        background-color: #F6C3A5;
         background-image:
-            linear-gradient(rgba(38,53,72,.045) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(38,53,72,.045) 1px, transparent 1px),
-            radial-gradient(circle at 94% 8%, rgba(217,119,113,.46), transparent 24rem),
-            radial-gradient(circle at 3% 78%, rgba(38,53,72,.18), transparent 30rem),
-            linear-gradient(135deg, #F4ECB0 0%, #E5D775 58%, #F0D98A 100%);
-        background-size: 30px 30px, 30px 30px, auto, auto, auto;
+            radial-gradient(circle at 92% 8%, rgba(255,255,255,.34), transparent 25rem),
+            linear-gradient(145deg, #F8D2BA 0%, #F4B894 58%, #F7C9AD 100%);
         background-attachment: fixed;
         color: var(--dn-ink);
     }
     [data-testid="stHeader"] {
-        background: rgba(244,236,176,.84);
-        border-bottom: 1px solid rgba(38,53,72,.13);
+        background: rgba(248,210,186,.88);
+        border-bottom: 1px solid rgba(38,53,72,.12);
         backdrop-filter: blur(10px);
     }
     .block-container {
@@ -803,7 +799,7 @@ st.markdown(
     [data-testid="stTabs"] [role="tabpanel"] {
         margin-top: .85rem;
         padding: .3rem 1.25rem 1.5rem;
-        background: rgba(255,253,240,.90);
+        background: #FFFFFF;
         border: 2px solid rgba(38,53,72,.72);
         border-radius: 14px;
         box-shadow: 8px 8px 0 rgba(91,48,53,.16);
@@ -815,7 +811,7 @@ st.markdown(
         border: 2px solid var(--dn-ink);
         border-left: 8px solid var(--dn-coral);
         border-radius: 8px;
-        background: linear-gradient(90deg, rgba(241,228,92,.42), white);
+        background: #FFFFFF;
         box-shadow: 4px 4px 0 rgba(38,53,72,.08);
     }
     .dn-section-intro strong {
@@ -832,14 +828,14 @@ st.markdown(
         border: 2px solid var(--dn-ink);
         border-top: 8px solid var(--dn-coral);
         border-radius: 9px;
-        box-shadow: 5px 5px 0 rgba(241,228,92,.62);
+        box-shadow: 5px 5px 0 rgba(38,53,72,.10);
     }
     [data-testid="stMetricValue"] { color: var(--dn-burgundy); }
     [data-testid="stDataFrame"], [data-testid="stDataEditor"] {
         overflow: hidden;
         border: 2px solid var(--dn-ink);
         border-radius: 10px;
-        box-shadow: 5px 5px 0 rgba(241,228,92,.38);
+        box-shadow: 5px 5px 0 rgba(38,53,72,.08);
     }
     [data-testid="stFileUploader"] {
         padding: 1rem;
