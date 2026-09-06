@@ -32,7 +32,8 @@ create table if not exists public.cargas_inventario (
   estado text not null default 'activa'
     check (estado in ('activa', 'deshecha', 'error')),
   creado_en timestamptz not null default now(),
-  deshecho_en timestamptz
+  deshecho_en timestamptz,
+  imagenes jsonb not null default '[]'::jsonb
 );
 
 create index if not exists cargas_inventario_huella_idx
@@ -68,4 +69,28 @@ grant usage, select
   on sequence public.cargas_inventario_id_seq to service_role;
 grant usage, select
   on sequence public.movimientos_inventario_id_seq to service_role;
+
+-- Agrega soporte de fotos a instalaciones existentes.
+alter table public.cargas_inventario
+  add column if not exists imagenes jsonb not null default '[]'::jsonb;
+
+-- Bucket privado: las imágenes se leen solamente desde el servidor de la app.
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'inventario-fotos',
+  'inventario-fotos',
+  false,
+  10485760,
+  array['image/png', 'image/jpeg', 'image/webp']
+)
+on conflict (id) do update
+set public = false,
+    file_size_limit = excluded.file_size_limit,
+    allowed_mime_types = excluded.allowed_mime_types;
 
