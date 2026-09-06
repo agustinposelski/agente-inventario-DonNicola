@@ -332,12 +332,36 @@ with tab_carga:
 with tab_inventario:
     try:
         inventario = cargar_inventario()
-        st.dataframe(inventario, use_container_width=True, hide_index=True)
-        st.download_button(
-            "Descargar inventario en CSV",
-            data=inventario.to_csv(index=False).encode("utf-8-sig"),
-            file_name="inventario_don_nicola.csv",
-            mime="text/csv",
-        )
+        if inventario.empty:
+            st.info("El inventario todavía está vacío.")
+        else:
+            inventario["Categoría"] = inventario["Categoría"].fillna("Otros")
+            extras = sorted(
+                set(inventario["Categoría"].astype(str)) - set(CATEGORIES)
+            )
+            categorias_presentes = [
+                categoria
+                for categoria in CATEGORIES + extras
+                if (inventario["Categoría"] == categoria).any()
+            ]
+
+            secciones = []
+            for categoria in categorias_presentes:
+                seccion = inventario[inventario["Categoría"] == categoria].copy()
+                seccion = seccion.sort_values(
+                    ["Producto", "Medida", "Variante"],
+                    key=lambda columna: columna.astype(str).str.lower(),
+                )
+                secciones.append(seccion)
+                st.subheader(f"{categoria} ({len(seccion)})")
+                st.dataframe(seccion, use_container_width=True, hide_index=True)
+
+            inventario_ordenado = pd.concat(secciones, ignore_index=True)
+            st.download_button(
+                "Descargar inventario en CSV",
+                data=inventario_ordenado.to_csv(index=False).encode("utf-8-sig"),
+                file_name="inventario_don_nicola.csv",
+                mime="text/csv",
+            )
     except Exception as error:
         st.info(f"El inventario online todavía no está configurado: {error}")
