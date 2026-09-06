@@ -2,6 +2,7 @@ import base64
 import hashlib
 import os
 import re
+import statistics
 import unicodedata
 from datetime import datetime, timezone
 
@@ -71,6 +72,19 @@ Reglas:
 - Conservá marcas y modelos cuando sean visibles.
 - Si una imagen no contiene inventario, no generes filas ficticias.
 """.strip()
+
+
+class FuentePrecio(BaseModel):
+    comercio: str
+    precio: float
+    url: str
+
+
+class ResultadoPrecio(BaseModel):
+    producto_buscado: str
+    fuentes: list[FuentePrecio]
+    confianza: str
+    observaciones: str
 
 
 class ProductoExtraido(BaseModel):
@@ -370,6 +384,121 @@ def eliminar_productos(ids: list[int]) -> None:
         db.table("inventario").delete().eq("id", int(identificador)).execute()
 
 
+def buscar_precio_online(fila: pd.Series) -> ResultadoPrecio:
+    api_key = secreto("OPENAI_API_KEY")
+    if not api_key:
+        raise RuntimeError("Falta configurar OPENAI_API_KEY.")
+
+    descripcion = " · ".join(
+        str(fila[campo]).strip()
+        for campo in ["Producto", "Medida", "Variante"]
+        if str(fila.get(campo, "")).strip()
+    )
+    pedido = f"""
+Buscá precios de venta actuales en Argentina para este producto nuevo:
+{descripcion}
+Categoría: {fila.get("Categoría", "")}
+
+Requisitos:
+- Buscá en Mercado Libre Argentina y comercios argentinos confiables.
+- Compará solamente productos equivalentes en medida, potencia, variante,
+  marca y presentación cuando esos datos estén disponibles.
+- Usá precios finales publicados en pesos argentinos y excluí envío,
+  cuotas, productos usados y publicaciones sin stock.
+- Devolvé entre 2 y 5 fuentes directas cuando existan.
+- Cada fuente debe incluir comercio, precio numérico en ARS y URL directa.
+- Si no hay coincidencias comparables, devolvé una lista vacía.
+- Confianza debe ser Alta, Media o Baja.
+""".strip()
+
+    client = OpenAI(api_key=api_key)
+    respuesta = client.responses.parse(
+        model=MODEL,
+        tools=[{"type": "web_search"}],
+        tool_choice="required",
+        input=pedido,
+        text_format=ResultadoPrecio,
+        store=False,
+    )
+    resultado = respuesta.output_parsed
+    if resultado is None:
+        raise RuntimeError("La búsqueda no devolvió un resultado válido.")
+    return resultado
+
+
+def guardar_resultado_precio(
+    producto_id: int,
+    resultado: ResultadoPrecio,
+) -> dict:
+    fuentes = [
+        {
+            "comercio": fuente.comercio.strip(),
+            "precio": float(fuente.precio),
+            "url": fuente.url.strip(),
+        }
+        for fuente in resultado.fuentes
+        if float(fuente.precio) > 0 and fuente.url.strip()
+    ]
+    if not fuentes:
+        raise ValueError("No se encontraron publicaciones comparables.")
+
+    valores = [fuente["precio"] for fuente in fuentes]
+    confianza = resultado.confianza.strip().capitalize()
+    if confianza not in ["Alta", "Media", "Baja"]:
+        confianza = "Baja"
+    if len(fuentes) == 1:
+        confianza = "Baja"
+
+    datos = {
+        "precio_min": min(valores),
+        "precio_referencia": statistics.median(valores),
+        "precio_max": max(valores),
+        "moneda": "ARS",
+        "fuentes_precio": fuentes,
+        "precio_confianza": confianza,
+        "precio_actualizado_en": datetime.now(timezone.utc).isoformat(),
+    }
+    (
+        cliente_supabase()
+        .table("inventario")
+        .update(datos)
+        .eq("id", int(producto_id))
+        .execute()
+    )
+    datos["fuentes"] = fuentes
+    datos["observaciones"] = resultado.observaciones
+    return datos
+
+
+def cargar_precios() -> pd.DataFrame:
+    respuesta = (
+        cliente_supabase()
+        .table("inventario")
+        .select(
+            "id,producto,categoria,medida,variante,precio_min,"
+            "precio_referencia,precio_max,moneda,fuentes_precio,"
+            "precio_confianza,precio_actualizado_en"
+        )
+        .order("producto")
+        .execute()
+    )
+    columnas = {
+        "id": "ID",
+        "producto": "Producto",
+        "categoria": "Categoría",
+        "medida": "Medida",
+        "variante": "Variante",
+        "precio_min": "Precio mínimo",
+        "precio_referencia": "Precio referencia",
+        "precio_max": "Precio máximo",
+        "moneda": "Moneda",
+        "fuentes_precio": "Fuentes",
+        "precio_confianza": "Confianza",
+        "precio_actualizado_en": "Precio actualizado",
+    }
+    return pd.DataFrame(respuesta.data).rename(columns=columnas)
+
+
 def cargar_historial() -> tuple[list[dict], list[dict]]:
     db = cliente_supabase()
     cargas = (
@@ -483,8 +612,13 @@ st.title("🧰 Inventario Don Nicola")
 if not autenticar():
     st.stop()
 
-tab_carga, tab_inventario, tab_historial = st.tabs(
-    ["Cargar imágenes", "Inventario acumulado", "Historial de cargas"]
+tab_carga, tab_inventario, tab_precios, tab_historial = st.tabs(
+    [
+        "Cargar imágenes",
+        "Inventario acumulado",
+        "Precios online",
+        "Historial de cargas",
+    ]
 )
 
 with tab_carga:
@@ -635,6 +769,128 @@ with tab_inventario:
             )
     except Exception as error:
         st.info(f"No se pudo cargar o modificar el inventario: {error}")
+
+with tab_precios:
+    try:
+        precios = cargar_precios()
+        if precios.empty:
+            st.info("El inventario todavía está vacío.")
+        else:
+            st.caption(
+                "Seleccioná hasta 5 productos. Cada búsqueda utiliza crédito de la API."
+            )
+            selector = precios[
+                ["ID", "Producto", "Categoría", "Medida", "Variante"]
+            ].copy()
+            selector["Buscar"] = False
+            seleccion = st.data_editor(
+                selector,
+                use_container_width=True,
+                hide_index=True,
+                key="selector_precios",
+                disabled=["Producto", "Categoría", "Medida", "Variante"],
+                column_config={
+                    "ID": None,
+                    "Buscar": st.column_config.CheckboxColumn("Buscar"),
+                },
+            )
+            elegidos = seleccion[seleccion["Buscar"]]
+
+            if st.button(
+                "Buscar precios seleccionados",
+                disabled=elegidos.empty,
+                type="primary",
+            ):
+                if len(elegidos) > 5:
+                    st.warning("Seleccioná como máximo 5 productos por tanda.")
+                else:
+                    resultados = []
+                    for _, producto in elegidos.iterrows():
+                        try:
+                            with st.spinner(
+                                f"Buscando {producto['Producto']}..."
+                            ):
+                                resultado = buscar_precio_online(producto)
+                                datos = guardar_resultado_precio(
+                                    int(producto["ID"]),
+                                    resultado,
+                                )
+                                resultados.append(
+                                    {
+                                        "producto": producto["Producto"],
+                                        **datos,
+                                    }
+                                )
+                        except Exception as error:
+                            st.warning(f"{producto['Producto']}: {error}")
+                    st.session_state["ultimos_precios"] = resultados
+                    st.session_state.pop("selector_precios", None)
+                    if resultados:
+                        st.success("Referencias de precios actualizadas.")
+                        st.rerun()
+
+            ultimos = st.session_state.get("ultimos_precios", [])
+            if ultimos:
+                st.subheader("Últimos resultados")
+                for resultado in ultimos:
+                    with st.expander(resultado["producto"], expanded=True):
+                        st.write(
+                            f"Referencia: ARS "
+                            f"{resultado['precio_referencia']:,.2f}"
+                        )
+                        st.write(
+                            f"Rango: ARS {resultado['precio_min']:,.2f} – "
+                            f"ARS {resultado['precio_max']:,.2f}"
+                        )
+                        st.write(f"Confianza: {resultado['precio_confianza']}")
+                        if resultado.get("observaciones"):
+                            st.caption(resultado["observaciones"])
+                        for fuente in resultado["fuentes"]:
+                            st.markdown(
+                                f"- [{fuente['comercio']}]"
+                                f"({fuente['url']}): "
+                                f"ARS {fuente['precio']:,.2f}"
+                            )
+
+            st.subheader("Referencias guardadas")
+            tabla_precios = precios.drop(
+                columns=["ID", "Fuentes"], errors="ignore"
+            )
+            st.dataframe(
+                tabla_precios,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Precio mínimo": st.column_config.NumberColumn(
+                        format="$ %.2f"
+                    ),
+                    "Precio referencia": st.column_config.NumberColumn(
+                        format="$ %.2f"
+                    ),
+                    "Precio máximo": st.column_config.NumberColumn(
+                        format="$ %.2f"
+                    ),
+                },
+            )
+
+            con_fuentes = precios[
+                precios["Fuentes"].apply(
+                    lambda valor: isinstance(valor, list) and bool(valor)
+                )
+            ]
+            if not con_fuentes.empty:
+                st.subheader("Fuentes guardadas")
+                for _, fila in con_fuentes.iterrows():
+                    with st.expander(fila["Producto"]):
+                        for fuente in fila["Fuentes"]:
+                            st.markdown(
+                                f"- [{fuente.get('comercio', 'Fuente')}]"
+                                f"({fuente.get('url', '')}): "
+                                f"ARS {float(fuente.get('precio', 0)):,.2f}"
+                            )
+    except Exception as error:
+        st.info(f"No se pudo cargar el módulo de precios: {error}")
+
 
 with tab_historial:
     try:
