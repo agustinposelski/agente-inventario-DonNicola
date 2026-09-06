@@ -478,6 +478,46 @@ def guardar_resultado_precio(
     return datos
 
 
+def parsear_precio_manual(valor: object) -> float:
+    texto = str(valor or "").strip().replace("$", "").replace(" ", "")
+    if not texto:
+        raise ValueError("Ingresá un precio.")
+    if "," in texto:
+        texto = texto.replace(".", "").replace(",", ".")
+    elif texto.count(".") == 1 and len(texto.split(".")[-1]) == 3:
+        texto = texto.replace(".", "")
+    precio = float(texto)
+    if precio <= 0:
+        raise ValueError("El precio manual debe ser mayor que cero.")
+    return precio
+
+
+def guardar_precios_manuales(tabla: pd.DataFrame) -> int:
+    db = cliente_supabase()
+    ahora = datetime.now(timezone.utc).isoformat()
+    actualizados = 0
+    for _, fila in tabla.iterrows():
+        valor = fila.get("Nueva mediana manual", "")
+        if not str(valor or "").strip():
+            continue
+        precio = parsear_precio_manual(valor)
+        (
+            db.table("inventario")
+            .update(
+                {
+                    "precio_referencia": precio,
+                    "moneda": "ARS",
+                    "precio_confianza": "Manual",
+                    "precio_actualizado_en": ahora,
+                }
+            )
+            .eq("id", int(fila["ID"]))
+            .execute()
+        )
+        actualizados += 1
+    return actualizados
+
+
 def cargar_precios() -> pd.DataFrame:
     respuesta = (
         cliente_supabase()
@@ -595,7 +635,7 @@ def cargar_inventario() -> pd.DataFrame:
         db.table("inventario")
         .select(
             "id,producto,categoria,medida,variante,cantidad,unidad,"
-            "observaciones,actualizado_en"
+            "observaciones,precio_referencia,actualizado_en"
         )
         .order("producto")
         .execute()
@@ -609,6 +649,7 @@ def cargar_inventario() -> pd.DataFrame:
         "cantidad": "Cantidad",
         "unidad": "Unidad",
         "observaciones": "Observaciones",
+        "precio_referencia": "Precio de referencia",
         "actualizado_en": "Última actualización",
     }
     return pd.DataFrame(respuesta.data).rename(columns=columnas)
@@ -620,11 +661,11 @@ st.title("🧰 Inventario Don Nicola")
 if not autenticar():
     st.stop()
 
-tab_carga, tab_inventario, tab_precios, tab_historial = st.tabs(
+tab_inventario, tab_carga, tab_precios, tab_historial = st.tabs(
     [
-        "Cargar imágenes",
         "Inventario acumulado",
-        "Precios online",
+        "Cargar imágenes",
+        "Análisis de precios",
         "Historial de cargas",
     ]
 )
@@ -708,6 +749,9 @@ with tab_inventario:
                     key=lambda columna: columna.astype(str).str.lower(),
                 )
                 secciones.append(seccion.copy())
+                seccion["Precio de referencia"] = seccion[
+                    "Precio de referencia"
+                ].apply(formatear_ars)
                 seccion["Eliminar"] = False
 
                 st.subheader(f"{categoria} ({len(seccion)})")
@@ -785,61 +829,13 @@ with tab_precios:
             st.info("El inventario todavía está vacío.")
         else:
             st.caption(
-                "Seleccioná hasta 5 productos. Cada búsqueda utiliza crédito de la API."
+                "Buscá precios online o completá manualmente la mediana. "
+                "Cada búsqueda online utiliza crédito de la API."
             )
-            selector = precios[
-                ["ID", "Producto", "Categoría", "Medida", "Variante"]
-            ].copy()
-            selector["Buscar"] = False
-            seleccion = st.data_editor(
-                selector,
-                use_container_width=True,
-                hide_index=True,
-                key="selector_precios",
-                disabled=["Producto", "Categoría", "Medida", "Variante"],
-                column_config={
-                    "ID": None,
-                    "Buscar": st.column_config.CheckboxColumn("Buscar"),
-                },
-            )
-            elegidos = seleccion[seleccion["Buscar"]]
-
-            if st.button(
-                "Buscar precios seleccionados",
-                disabled=elegidos.empty,
-                type="primary",
-            ):
-                if len(elegidos) > 5:
-                    st.warning("Seleccioná como máximo 5 productos por tanda.")
-                else:
-                    resultados = []
-                    for _, producto in elegidos.iterrows():
-                        try:
-                            with st.spinner(
-                                f"Buscando {producto['Producto']}..."
-                            ):
-                                resultado = buscar_precio_online(producto)
-                                datos = guardar_resultado_precio(
-                                    int(producto["ID"]),
-                                    resultado,
-                                )
-                                resultados.append(
-                                    {
-                                        "producto": producto["Producto"],
-                                        **datos,
-                                    }
-                                )
-                        except Exception as error:
-                            st.warning(f"{producto['Producto']}: {error}")
-                    st.session_state["ultimos_precios"] = resultados
-                    st.session_state.pop("selector_precios", None)
-                    if resultados:
-                        st.success("Referencias de precios actualizadas.")
-                        st.rerun()
 
             ultimos = st.session_state.get("ultimos_precios", [])
             if ultimos:
-                st.subheader("Últimos resultados")
+                st.subheader("Últimos resultados online")
                 for resultado in ultimos:
                     with st.expander(resultado["producto"], expanded=True):
                         st.write(
@@ -863,28 +859,139 @@ with tab_precios:
                             )
                             st.markdown(texto_fuente)
 
-            st.subheader("Referencias guardadas")
-            tabla_precios = precios.drop(
-                columns=["ID", "Fuentes"], errors="ignore"
+            precios["Categoría"] = precios["Categoría"].fillna("Otros")
+            extras = sorted(
+                set(precios["Categoría"].astype(str)) - set(CATEGORIES)
             )
-            for columna in [
-                "Precio mínimo",
-                "Precio referencia",
-                "Precio máximo",
-            ]:
-                tabla_precios[columna] = tabla_precios[columna].apply(
+            categorias_precios = [
+                categoria
+                for categoria in CATEGORIES + extras
+                if (precios["Categoría"] == categoria).any()
+            ]
+
+            for categoria in categorias_precios:
+                seccion = precios[precios["Categoría"] == categoria].copy()
+                seccion = seccion.sort_values(
+                    ["Producto", "Medida", "Variante"],
+                    key=lambda columna: columna.astype(str).str.lower(),
+                )
+                editor = seccion[
+                    [
+                        "ID",
+                        "Producto",
+                        "Medida",
+                        "Variante",
+                        "Precio mínimo",
+                        "Precio referencia",
+                        "Precio máximo",
+                        "Confianza",
+                    ]
+                ].copy()
+                editor["Precio mínimo"] = editor["Precio mínimo"].apply(
                     formatear_ars
                 )
-            tabla_precios = tabla_precios.rename(
-                columns={
-                    "Precio referencia": "Precio referencia (mediana)"
-                }
-            )
-            st.dataframe(
-                tabla_precios,
-                use_container_width=True,
-                hide_index=True,
-            )
+                editor["Precio referencia"] = editor[
+                    "Precio referencia"
+                ].apply(formatear_ars)
+                editor["Precio máximo"] = editor["Precio máximo"].apply(
+                    formatear_ars
+                )
+                editor["Nueva mediana manual"] = ""
+                editor["Buscar online"] = False
+
+                st.subheader(f"{categoria} ({len(editor)})")
+                editada = st.data_editor(
+                    editor,
+                    use_container_width=True,
+                    hide_index=True,
+                    key=f"editor_precios_{normalizar(categoria)}",
+                    disabled=[
+                        "Producto",
+                        "Medida",
+                        "Variante",
+                        "Precio mínimo",
+                        "Precio referencia",
+                        "Precio máximo",
+                        "Confianza",
+                    ],
+                    column_config={
+                        "ID": None,
+                        "Nueva mediana manual": st.column_config.TextColumn(
+                            "Nueva mediana manual",
+                            help="Ejemplos: 60000 o 60.000,50",
+                        ),
+                        "Buscar online": st.column_config.CheckboxColumn(
+                            "Buscar online"
+                        ),
+                    },
+                )
+
+                elegidos = editada[editada["Buscar online"]]
+                nuevos_manuales = editada[
+                    editada["Nueva mediana manual"]
+                    .fillna("")
+                    .astype(str)
+                    .str.strip()
+                    .ne("")
+                ]
+
+                buscar_col, manual_col = st.columns(2)
+                with buscar_col:
+                    if st.button(
+                        "Buscar seleccionados",
+                        key=f"buscar_precios_{normalizar(categoria)}",
+                        disabled=elegidos.empty,
+                    ):
+                        if len(elegidos) > 5:
+                            st.warning(
+                                "Seleccioná como máximo 5 productos por tanda."
+                            )
+                        else:
+                            resultados = []
+                            for _, producto in elegidos.iterrows():
+                                try:
+                                    with st.spinner(
+                                        f"Buscando {producto['Producto']}..."
+                                    ):
+                                        resultado = buscar_precio_online(producto)
+                                        datos = guardar_resultado_precio(
+                                            int(producto["ID"]),
+                                            resultado,
+                                        )
+                                        resultados.append(
+                                            {
+                                                "producto": producto["Producto"],
+                                                **datos,
+                                            }
+                                        )
+                                except Exception as error:
+                                    st.warning(
+                                        f"{producto['Producto']}: {error}"
+                                    )
+                            st.session_state["ultimos_precios"] = resultados
+                            st.session_state.pop(
+                                f"editor_precios_{normalizar(categoria)}",
+                                None,
+                            )
+                            if resultados:
+                                st.rerun()
+
+                with manual_col:
+                    if st.button(
+                        "Guardar medianas manuales",
+                        key=f"guardar_manuales_{normalizar(categoria)}",
+                        disabled=nuevos_manuales.empty,
+                    ):
+                        cantidad = guardar_precios_manuales(nuevos_manuales)
+                        st.session_state.pop(
+                            f"editor_precios_{normalizar(categoria)}",
+                            None,
+                        )
+                        if cantidad:
+                            st.success(
+                                f"{cantidad} precio(s) manual(es) guardado(s)."
+                            )
+                            st.rerun()
 
             con_fuentes = precios[
                 precios["Fuentes"].apply(
@@ -903,7 +1010,7 @@ with tab_precios:
                             )
                             st.markdown(texto_fuente)
     except Exception as error:
-        st.info(f"No se pudo cargar el módulo de precios: {error}")
+        st.info(f"No se pudo cargar el análisis de precios: {error}")
 
 
 with tab_historial:
