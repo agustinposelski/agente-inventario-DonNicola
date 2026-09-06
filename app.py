@@ -20,10 +20,11 @@ CATEGORIES = [
     "Pinturería",
     "Herramientas",
     "Seguridad",
-    "Jardín",
+    "Jardinería",
     "Gas",
     "Construcción",
     "Ferretería general",
+    "Bulonería",
     "Otros",
 ]
 COLUMNS = [
@@ -50,7 +51,7 @@ Categorías permitidas:
 - Pintura
 - Herramientas
 - Seguridad
-- Jardín
+- Jardinería
 - Gas
 - Construcción
 - Ferretería general
@@ -548,7 +549,7 @@ def cargar_precios() -> pd.DataFrame:
     tabla = pd.DataFrame(respuesta.data).rename(columns=columnas)
     if "Categoría" in tabla.columns:
         tabla["Categoría"] = tabla["Categoría"].replace(
-            {"Pintura": "Pinturería"}
+            {"Pintura": "Pinturería", "Jardín": "Jardinería"}
         )
     return tabla
 
@@ -661,7 +662,7 @@ def cargar_inventario() -> pd.DataFrame:
     tabla = pd.DataFrame(respuesta.data).rename(columns=columnas)
     if "Categoría" in tabla.columns:
         tabla["Categoría"] = tabla["Categoría"].replace(
-            {"Pintura": "Pinturería"}
+            {"Pintura": "Pinturería", "Jardín": "Jardinería"}
         )
     return tabla
 
@@ -1461,7 +1462,7 @@ with tab_historial:
                         if "Categoría" in tabla_detalle.columns:
                             tabla_detalle["Categoría"] = tabla_detalle[
                                 "Categoría"
-                            ].replace({"Pintura": "Pinturería"})
+                            ].replace({"Pintura": "Pinturería", "Jardín": "Jardinería"})
                         st.dataframe(
                             tabla_detalle,
                             use_container_width=True,
