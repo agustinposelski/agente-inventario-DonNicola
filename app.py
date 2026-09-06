@@ -133,6 +133,14 @@ def cliente_supabase() -> Client:
     return create_client(url, key)
 
 
+def formatear_ars(valor: object) -> str:
+    if valor is None or pd.isna(valor):
+        return "—"
+    numero = f"{float(valor):,.2f}"
+    numero = numero.replace(",", "X").replace(".", ",").replace("X", ".")
+    return f"$ {numero}"
+
+
 def normalizar(texto: object) -> str:
     limpio = unicodedata.normalize("NFKD", str(texto or ""))
     limpio = limpio.encode("ascii", "ignore").decode("ascii").lower().strip()
@@ -835,12 +843,14 @@ with tab_precios:
                 for resultado in ultimos:
                     with st.expander(resultado["producto"], expanded=True):
                         st.write(
-                            f"Referencia: ARS "
-                            f"{resultado['precio_referencia']:,.2f}"
+                            "Referencia: "
+                            + formatear_ars(resultado["precio_referencia"])
                         )
                         st.write(
-                            f"Rango: ARS {resultado['precio_min']:,.2f} – "
-                            f"ARS {resultado['precio_max']:,.2f}"
+                            "Rango: "
+                            + formatear_ars(resultado["precio_min"])
+                            + " – "
+                            + formatear_ars(resultado["precio_max"])
                         )
                         st.write(f"Confianza: {resultado['precio_confianza']}")
                         if resultado.get("observaciones"):
@@ -849,28 +859,30 @@ with tab_precios:
                             st.markdown(
                                 f"- [{fuente['comercio']}]"
                                 f"({fuente['url']}): "
-                                f"ARS {fuente['precio']:,.2f}"
+                                formatear_ars(fuente["precio"])
                             )
 
             st.subheader("Referencias guardadas")
             tabla_precios = precios.drop(
                 columns=["ID", "Fuentes"], errors="ignore"
             )
+            for columna in [
+                "Precio mínimo",
+                "Precio referencia",
+                "Precio máximo",
+            ]:
+                tabla_precios[columna] = tabla_precios[columna].apply(
+                    formatear_ars
+                )
+            tabla_precios = tabla_precios.rename(
+                columns={
+                    "Precio referencia": "Precio referencia (mediana)"
+                }
+            )
             st.dataframe(
                 tabla_precios,
                 use_container_width=True,
                 hide_index=True,
-                column_config={
-                    "Precio mínimo": st.column_config.NumberColumn(
-                        format="$ %.2f"
-                    ),
-                    "Precio referencia": st.column_config.NumberColumn(
-                        format="$ %.2f"
-                    ),
-                    "Precio máximo": st.column_config.NumberColumn(
-                        format="$ %.2f"
-                    ),
-                },
             )
 
             con_fuentes = precios[
@@ -886,7 +898,7 @@ with tab_precios:
                             st.markdown(
                                 f"- [{fuente.get('comercio', 'Fuente')}]"
                                 f"({fuente.get('url', '')}): "
-                                f"ARS {float(fuente.get('precio', 0)):,.2f}"
+                                formatear_ars(fuente.get("precio", 0))
                             )
     except Exception as error:
         st.info(f"No se pudo cargar el módulo de precios: {error}")
