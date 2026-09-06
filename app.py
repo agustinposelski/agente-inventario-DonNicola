@@ -856,11 +856,12 @@ with tab_precios:
                         if resultado.get("observaciones"):
                             st.caption(resultado["observaciones"])
                         for fuente in resultado["fuentes"]:
-                            st.markdown(
+                            texto_fuente = (
                                 f"- [{fuente['comercio']}]"
                                 f"({fuente['url']}): "
-                                formatear_ars(fuente["precio"])
+                                f"{formatear_ars(fuente['precio'])}"
                             )
+                            st.markdown(texto_fuente)
 
             st.subheader("Referencias guardadas")
             tabla_precios = precios.drop(
@@ -895,11 +896,12 @@ with tab_precios:
                 for _, fila in con_fuentes.iterrows():
                     with st.expander(fila["Producto"]):
                         for fuente in fila["Fuentes"]:
-                            st.markdown(
+                            texto_fuente = (
                                 f"- [{fuente.get('comercio', 'Fuente')}]"
                                 f"({fuente.get('url', '')}): "
-                                formatear_ars(fuente.get("precio", 0))
+                                f"{formatear_ars(fuente.get('precio', 0))}"
                             )
+                            st.markdown(texto_fuente)
     except Exception as error:
         st.info(f"No se pudo cargar el módulo de precios: {error}")
 
