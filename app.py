@@ -655,8 +655,185 @@ def cargar_inventario() -> pd.DataFrame:
     return pd.DataFrame(respuesta.data).rename(columns=columnas)
 
 
-st.set_page_config(page_title="Inventario Don Nicola", page_icon="🧰", layout="wide")
-st.title("🧰 Inventario Don Nicola")
+st.set_page_config(
+    page_title="Ferretería Don Nicola",
+    page_icon="🔧",
+    layout="wide",
+    initial_sidebar_state="collapsed",
+)
+
+st.markdown(
+    """
+    <style>
+    :root {
+        --dn-navy: #2B2F43;
+        --dn-slate: #4A5E76;
+        --dn-gray: #BDC3C2;
+        --dn-white: #FFFFFF;
+        --dn-orange: #F4794A;
+    }
+    .stApp {
+        background:
+            radial-gradient(circle at 100% 0%, rgba(244,121,74,.10), transparent 28rem),
+            linear-gradient(180deg, #f7f8f8 0%, #ffffff 34rem);
+        color: var(--dn-navy);
+    }
+    [data-testid="stHeader"] { background: rgba(255,255,255,.72); }
+    .block-container {
+        max-width: 1500px;
+        padding-top: 1.25rem;
+        padding-bottom: 4rem;
+    }
+    .dn-hero {
+        position: relative;
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        overflow: hidden;
+        border-radius: 24px;
+        padding: 2.8rem 3rem;
+        margin: .4rem 0 1.6rem;
+        background-image:
+            linear-gradient(90deg, rgba(43,47,67,.98) 0%, rgba(43,47,67,.90) 38%, rgba(43,47,67,.18) 70%),
+            url("https://raw.githubusercontent.com/agustinposelski/agente-inventario-DonNicola/main/assets/hero-ferreteria.jpg");
+        background-size: cover;
+        background-position: center;
+        box-shadow: 0 18px 48px rgba(43,47,67,.20);
+        border-bottom: 6px solid var(--dn-orange);
+    }
+    .dn-hero-content { position: relative; z-index: 1; max-width: 660px; }
+    .dn-kicker {
+        display: inline-block;
+        color: var(--dn-orange);
+        font-size: .78rem;
+        font-weight: 800;
+        letter-spacing: .16em;
+        text-transform: uppercase;
+        margin-bottom: .7rem;
+    }
+    .dn-hero h1 {
+        color: white;
+        font-size: clamp(2.15rem, 5vw, 4.25rem);
+        line-height: .98;
+        letter-spacing: -.04em;
+        margin: 0;
+    }
+    .dn-slogan {
+        color: white;
+        font-size: clamp(1.1rem, 2vw, 1.55rem);
+        font-weight: 500;
+        margin: .8rem 0 1.35rem;
+    }
+    .dn-badges { display: flex; flex-wrap: wrap; gap: .55rem; }
+    .dn-badge {
+        padding: .42rem .75rem;
+        color: white;
+        border: 1px solid rgba(255,255,255,.28);
+        background: rgba(74,94,118,.55);
+        backdrop-filter: blur(8px);
+        border-radius: 999px;
+        font-size: .82rem;
+        font-weight: 600;
+    }
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {
+        gap: .45rem;
+        background: white;
+        padding: .45rem;
+        border: 1px solid #e6e9e8;
+        border-radius: 16px;
+        box-shadow: 0 8px 26px rgba(43,47,67,.08);
+    }
+    [data-testid="stTabs"] [data-baseweb="tab"] {
+        height: 48px;
+        padding: 0 1.15rem;
+        border-radius: 11px;
+        color: var(--dn-slate);
+        font-weight: 700;
+    }
+    [data-testid="stTabs"] [aria-selected="true"] {
+        color: white;
+        background: var(--dn-navy);
+    }
+    [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
+        background-color: var(--dn-orange);
+    }
+    .dn-section-intro {
+        margin: 1.25rem 0 1rem;
+        padding: 1.1rem 1.3rem;
+        border-left: 5px solid var(--dn-orange);
+        border-radius: 0 14px 14px 0;
+        background: linear-gradient(90deg, rgba(189,195,194,.24), white);
+    }
+    .dn-section-intro strong {
+        display: block;
+        color: var(--dn-navy);
+        font-size: 1.15rem;
+        margin-bottom: .15rem;
+    }
+    .dn-section-intro span { color: var(--dn-slate); }
+    [data-testid="stMetric"] {
+        min-height: 112px;
+        padding: 1rem 1.1rem;
+        background: white;
+        border: 1px solid #e4e7e6;
+        border-top: 4px solid var(--dn-orange);
+        border-radius: 15px;
+        box-shadow: 0 8px 24px rgba(43,47,67,.07);
+    }
+    [data-testid="stMetricValue"] { color: var(--dn-navy); }
+    [data-testid="stDataFrame"], [data-testid="stDataEditor"] {
+        overflow: hidden;
+        border: 1px solid #e1e5e4;
+        border-radius: 15px;
+        box-shadow: 0 8px 24px rgba(43,47,67,.06);
+    }
+    .stButton > button, .stDownloadButton > button {
+        min-height: 42px;
+        border-radius: 10px;
+        border-color: var(--dn-slate);
+        font-weight: 700;
+    }
+    .stButton > button[kind="primary"] {
+        background: var(--dn-orange);
+        border-color: var(--dn-orange);
+        color: white;
+    }
+    .stButton > button[kind="primary"]:hover {
+        background: #df6134;
+        border-color: #df6134;
+    }
+    h2, h3 { color: var(--dn-navy); }
+    hr { border-color: #e6e9e8; }
+    @media (max-width: 760px) {
+        .block-container { padding: .75rem .8rem 3rem; }
+        .dn-hero {
+            min-height: 270px;
+            padding: 2rem 1.4rem;
+            background-position: 64% center;
+        }
+        .dn-hero-content { max-width: 86%; }
+        .dn-badge { font-size: .72rem; }
+        [data-testid="stTabs"] [data-baseweb="tab"] {
+            padding: 0 .65rem;
+            font-size: .78rem;
+        }
+    }
+    </style>
+    <section class="dn-hero">
+        <div class="dn-hero-content">
+            <span class="dn-kicker">Ferretería · Inventario inteligente</span>
+            <h1>Ferretería<br>Don Nicola</h1>
+            <p class="dn-slogan">Nunca te abandona</p>
+            <div class="dn-badges">
+                <span class="dn-badge">🔧 Inventario ordenado</span>
+                <span class="dn-badge">📷 Carga desde fotos</span>
+                <span class="dn-badge">📊 Precios de referencia</span>
+            </div>
+        </div>
+    </section>
+    """,
+    unsafe_allow_html=True,
+)
 
 if not autenticar():
     st.stop()
@@ -671,6 +848,11 @@ tab_inventario, tab_carga, tab_precios, tab_historial = st.tabs(
 )
 
 with tab_carga:
+    st.markdown(
+        '<div class="dn-section-intro"><strong>Cargar nuevo inventario</strong>'
+        '<span>Subí las fotos de tus anotaciones y revisá los datos antes de sumarlos.</span></div>',
+        unsafe_allow_html=True,
+    )
     archivos = st.file_uploader(
         "Subí una o varias imágenes del inventario",
         type=["png", "jpg", "jpeg", "webp"],
@@ -726,6 +908,11 @@ with tab_carga:
                     st.error(f"No se pudo guardar el lote: {error}")
 
 with tab_inventario:
+    st.markdown(
+        '<div class="dn-section-intro"><strong>Panel principal</strong>'
+        '<span>Consultá el stock, corregí cantidades y organizá los productos por rubro.</span></div>',
+        unsafe_allow_html=True,
+    )
     try:
         inventario = cargar_inventario()
         if inventario.empty:
@@ -740,6 +927,12 @@ with tab_inventario:
                 for categoria in CATEGORIES + extras
                 if (inventario["Categoría"] == categoria).any()
             ]
+
+            resumen_productos, resumen_categorias, resumen_precios = st.columns(3)
+            resumen_productos.metric("Productos registrados", len(inventario))
+            resumen_categorias.metric("Categorías activas", len(categorias_presentes))
+            con_precio = int(inventario["Precio de referencia"].notna().sum())
+            resumen_precios.metric("Productos con precio", con_precio)
 
             secciones = []
             for categoria in categorias_presentes:
@@ -823,6 +1016,11 @@ with tab_inventario:
         st.info(f"No se pudo cargar o modificar el inventario: {error}")
 
 with tab_precios:
+    st.markdown(
+        '<div class="dn-section-intro"><strong>Análisis de precios</strong>'
+        '<span>Compará valores online y ajustá manualmente el precio de referencia.</span></div>',
+        unsafe_allow_html=True,
+    )
     try:
         precios = cargar_precios()
         if precios.empty:
@@ -1033,6 +1231,11 @@ with tab_precios:
 
 
 with tab_historial:
+    st.markdown(
+        '<div class="dn-section-intro"><strong>Historial de cargas</strong>'
+        '<span>Revisá cada ingreso, sus productos y las fotografías originales.</span></div>',
+        unsafe_allow_html=True,
+    )
     try:
         cargas, movimientos = cargar_historial()
         if not cargas:
