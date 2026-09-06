@@ -686,12 +686,22 @@ st.markdown(
         --dn-white: #FFFFFF;
     }
     .stApp {
-        background:
-            radial-gradient(circle at 100% 0%, rgba(241,228,92,.27), transparent 30rem),
-            linear-gradient(180deg, var(--dn-cream) 0%, #ffffff 36rem);
+        background-color: #E8DC87;
+        background-image:
+            linear-gradient(rgba(38,53,72,.045) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(38,53,72,.045) 1px, transparent 1px),
+            radial-gradient(circle at 94% 8%, rgba(217,119,113,.46), transparent 24rem),
+            radial-gradient(circle at 3% 78%, rgba(38,53,72,.18), transparent 30rem),
+            linear-gradient(135deg, #F4ECB0 0%, #E5D775 58%, #F0D98A 100%);
+        background-size: 30px 30px, 30px 30px, auto, auto, auto;
+        background-attachment: fixed;
         color: var(--dn-ink);
     }
-    [data-testid="stHeader"] { background: rgba(255,253,240,.82); }
+    [data-testid="stHeader"] {
+        background: rgba(244,236,176,.84);
+        border-bottom: 1px solid rgba(38,53,72,.13);
+        backdrop-filter: blur(10px);
+    }
     .block-container {
         max-width: 1500px;
         padding-top: 1.25rem;
@@ -790,6 +800,15 @@ st.markdown(
     [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
         background-color: var(--dn-coral);
     }
+    [data-testid="stTabs"] [role="tabpanel"] {
+        margin-top: .85rem;
+        padding: .3rem 1.25rem 1.5rem;
+        background: rgba(255,253,240,.90);
+        border: 2px solid rgba(38,53,72,.72);
+        border-radius: 14px;
+        box-shadow: 8px 8px 0 rgba(91,48,53,.16);
+        backdrop-filter: blur(8px);
+    }
     .dn-section-intro {
         margin: 1.35rem 0 1rem;
         padding: 1.1rem 1.3rem;
@@ -869,6 +888,10 @@ st.markdown(
     hr { border-color: rgba(38,53,72,.18); }
     @media (max-width: 760px) {
         .block-container { padding: .75rem .8rem 3rem; }
+        [data-testid="stTabs"] [role="tabpanel"] {
+            padding: .2rem .65rem 1rem;
+            box-shadow: 4px 4px 0 rgba(91,48,53,.14);
+        }
         .dn-hero {
             min-height: 300px;
             padding: 1.7rem 1.25rem;
