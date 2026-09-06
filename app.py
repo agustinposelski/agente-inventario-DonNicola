@@ -888,7 +888,6 @@ st.markdown(
     </style>
     <section class="dn-hero">
         <div class="dn-hero-content">
-            <span class="dn-kicker">Ferretería de confianza</span>
             <h1>Ferretería<br>Don Nicola</h1>
             <p class="dn-slogan">“Nunca te abandona”</p>
             <div class="dn-badges">
