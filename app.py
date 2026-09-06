@@ -686,15 +686,12 @@ st.markdown(
         --dn-white: #FFFFFF;
     }
     .stApp {
-        background-color: #F6C3A5;
-        background-image:
-            radial-gradient(circle at 92% 8%, rgba(255,255,255,.34), transparent 25rem),
-            linear-gradient(145deg, #F8D2BA 0%, #F4B894 58%, #F7C9AD 100%);
-        background-attachment: fixed;
+        background: #FFFFFF;
+        background-image: none;
         color: var(--dn-ink);
     }
     [data-testid="stHeader"] {
-        background: rgba(248,210,186,.88);
+        background: rgba(255,255,255,.94);
         border-bottom: 1px solid rgba(38,53,72,.12);
         backdrop-filter: blur(10px);
     }
