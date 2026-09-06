@@ -835,6 +835,17 @@ st.markdown(
         background: #FFFFFF !important;
         box-shadow: 5px 5px 0 rgba(38,53,72,.08);
     }
+    [data-testid="stDataEditor"] {
+        --gdg-bg-cell: #FFFFFF !important;
+        --gdg-bg-header: #FFFFFF !important;
+        --gdg-bg-header-has-focus: #FFFFFF !important;
+        --gdg-bg-header-hover: #FFFFFF !important;
+        --gdg-bg-bubble: #FFFFFF !important;
+        --gdg-bg-bubble-hover: #FFFFFF !important;
+        --gdg-bg-search-result: #FFFFFF !important;
+        --gdg-bg-search-result-hover: #FFFFFF !important;
+        background: #FFFFFF !important;
+    }
     [data-testid="stDataEditor"] [role="grid"],
     [data-testid="stDataEditor"] [role="row"],
     [data-testid="stDataEditor"] [role="gridcell"],
