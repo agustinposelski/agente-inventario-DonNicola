@@ -832,7 +832,26 @@ st.markdown(
         overflow: hidden;
         border: 2px solid var(--dn-ink);
         border-radius: 10px;
+        background: #FFFFFF !important;
         box-shadow: 5px 5px 0 rgba(38,53,72,.08);
+    }
+    [data-testid="stDataEditor"] [role="grid"],
+    [data-testid="stDataEditor"] [role="row"],
+    [data-testid="stDataEditor"] [role="gridcell"],
+    [data-testid="stDataEditor"] [role="columnheader"],
+    [data-testid="stDataEditor"] [data-baseweb="input"],
+    [data-testid="stDataEditor"] input,
+    [data-testid="stDataFrame"] [role="grid"],
+    [data-testid="stDataFrame"] [role="row"],
+    [data-testid="stDataFrame"] [role="gridcell"],
+    [data-testid="stDataFrame"] [role="columnheader"] {
+        background-color: #FFFFFF !important;
+    }
+    [data-testid="stMetricLabel"],
+    [data-testid="stMetricValue"],
+    .dn-section-intro strong,
+    h2, h3 {
+        color: var(--dn-coral) !important;
     }
     [data-testid="stFileUploader"] {
         padding: 1rem;
