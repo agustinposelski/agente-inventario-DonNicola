@@ -309,9 +309,18 @@ def actualizar_stock(tabla: pd.DataFrame) -> None:
         cantidad = float(fila["Cantidad"])
         if cantidad < 0:
             raise ValueError("La cantidad no puede ser negativa.")
+        categoria = str(fila["Categoría"]).strip()
+        if categoria not in CATEGORIES:
+            raise ValueError("Seleccioná una categoría válida.")
         (
             db.table("inventario")
-            .update({"cantidad": cantidad, "actualizado_en": ahora})
+            .update(
+                {
+                    "cantidad": cantidad,
+                    "categoria": categoria,
+                    "actualizado_en": ahora,
+                }
+            )
             .eq("id", int(fila["ID"]))
             .execute()
         )
@@ -529,10 +538,16 @@ with tab_inventario:
                     disabled=[
                         columna
                         for columna in seccion.columns
-                        if columna not in ["Cantidad", "Eliminar"]
+                        if columna not in ["Categoría", "Cantidad", "Eliminar"]
                     ],
                     column_config={
                         "ID": None,
+                        "Categoría": st.column_config.SelectboxColumn(
+                            "Categoría",
+                            options=CATEGORIES,
+                            required=True,
+                            help="Cambiá la categoría y guardá para mover el producto.",
+                        ),
                         "Cantidad": st.column_config.NumberColumn(
                             "Cantidad",
                             min_value=0.0,
@@ -549,11 +564,11 @@ with tab_inventario:
                 guardar, eliminar = st.columns(2)
                 with guardar:
                     if st.button(
-                        "Guardar cantidades",
+                        "Guardar cambios",
                         key=f"guardar_{normalizar(categoria)}",
                     ):
                         actualizar_stock(editada)
-                        st.success(f"Stock de {categoria} actualizado.")
+                        st.success(f"Productos de {categoria} actualizados.")
                         st.rerun()
 
                 ids_eliminar = [
