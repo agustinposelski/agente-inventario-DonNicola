@@ -367,22 +367,85 @@ def actualizar_stock(tabla: pd.DataFrame) -> None:
     db = cliente_supabase()
     ahora = datetime.now(timezone.utc).isoformat()
     for _, fila in tabla.iterrows():
+        identificador = int(fila["ID"])
+        producto = str(fila["Producto"]).strip()
+        unidad = str(fila["Unidad"]).strip()
+        medida = str(fila["Medida"]).strip()
+        variante = str(fila["Variante"]).strip()
+        if not producto:
+            raise ValueError("El nombre del producto no puede quedar vacío.")
+
         cantidad = float(fila["Cantidad"])
         if cantidad < 0:
             raise ValueError("La cantidad no puede ser negativa.")
+
         categoria = str(fila["Categoría"]).strip()
         if categoria not in CATEGORIES:
             raise ValueError("Seleccioná una categoría válida.")
+
+        precio_texto = str(fila.get("Precio de referencia", "") or "").strip()
+        if precio_texto.lower() in {"", "—", "nan", "none"}:
+            precio_nuevo = None
+        else:
+            precio_nuevo = parsear_precio_manual(precio_texto)
+
+        nueva_clave = "|".join(
+            normalizar(valor)
+            for valor in [producto, medida, variante, unidad]
+        )
+        actual = (
+            db.table("inventario")
+            .select("id,clave,precio_referencia")
+            .eq("id", identificador)
+            .limit(1)
+            .execute()
+        )
+        if not actual.data:
+            raise ValueError(f"No se encontró el producto {producto}.")
+
+        registro = actual.data[0]
+        if nueva_clave != registro.get("clave"):
+            repetido = (
+                db.table("inventario")
+                .select("id")
+                .eq("clave", nueva_clave)
+                .neq("id", identificador)
+                .limit(1)
+                .execute()
+            )
+            if repetido.data:
+                raise ValueError(
+                    f"Ya existe otro producto con la misma combinación: {producto}."
+                )
+
+        precio_anterior = registro.get("precio_referencia")
+        if precio_anterior is None and precio_nuevo is None:
+            precio_cambio = False
+        elif precio_anterior is None or precio_nuevo is None:
+            precio_cambio = True
+        else:
+            precio_cambio = abs(float(precio_anterior) - precio_nuevo) > 0.001
+
+        datos = {
+            "clave": nueva_clave,
+            "producto": producto,
+            "medida": medida,
+            "variante": variante,
+            "unidad": unidad,
+            "cantidad": cantidad,
+            "categoria": categoria,
+            "actualizado_en": ahora,
+        }
+        if precio_cambio:
+            datos["precio_referencia"] = precio_nuevo
+            datos["moneda"] = "ARS"
+            datos["precio_confianza"] = "Manual"
+            datos["precio_actualizado_en"] = ahora
+
         (
             db.table("inventario")
-            .update(
-                {
-                    "cantidad": cantidad,
-                    "categoria": categoria,
-                    "actualizado_en": ahora,
-                }
-            )
-            .eq("id", int(fila["ID"]))
+            .update(datos)
+            .eq("id", identificador)
             .execute()
         )
 
@@ -551,6 +614,10 @@ def cargar_precios() -> pd.DataFrame:
         tabla["Categoría"] = tabla["Categoría"].replace(
             {"Pintura": "Pinturería", "Jardín": "Jardinería"}
         )
+    if "Producto" in tabla.columns:
+        tabla["Producto"] = tabla["Producto"].replace(
+            {"Punta de cuerno": "Punta de guierro"}
+        )
     return tabla
 
 
@@ -663,6 +730,10 @@ def cargar_inventario() -> pd.DataFrame:
     if "Categoría" in tabla.columns:
         tabla["Categoría"] = tabla["Categoría"].replace(
             {"Pintura": "Pinturería", "Jardín": "Jardinería"}
+        )
+    if "Producto" in tabla.columns:
+        tabla["Producto"] = tabla["Producto"].replace(
+            {"Punta de cuerno": "Punta de guierro"}
         )
     return tabla
 
@@ -1071,10 +1142,23 @@ with tab_inventario:
                     disabled=[
                         columna
                         for columna in seccion.columns
-                        if columna not in ["Categoría", "Cantidad", "Eliminar"]
+                        if columna
+                        not in [
+                            "Producto",
+                            "Categoría",
+                            "Cantidad",
+                            "Unidad",
+                            "Precio de referencia",
+                            "Eliminar",
+                        ]
                     ],
                     column_config={
                         "ID": None,
+                        "Producto": st.column_config.TextColumn(
+                            "Producto",
+                            required=True,
+                            help="Corregí el nombre si fue interpretado incorrectamente.",
+                        ),
                         "Categoría": st.column_config.SelectboxColumn(
                             "Categoría",
                             options=CATEGORIES,
@@ -1086,6 +1170,14 @@ with tab_inventario:
                             min_value=0.0,
                             required=True,
                             help="Modificá este valor para corregir el stock.",
+                        ),
+                        "Unidad": st.column_config.TextColumn(
+                            "Unidad",
+                            help="Ejemplos: unidad, rollo, caja, paquete.",
+                        ),
+                        "Precio de referencia": st.column_config.TextColumn(
+                            "Precio de referencia",
+                            help="Podés escribir 60000 o 60.000,50.",
                         ),
                         "Eliminar": st.column_config.CheckboxColumn(
                             "Eliminar",
