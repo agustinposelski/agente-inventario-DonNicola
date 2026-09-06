@@ -142,6 +142,36 @@ def huella_archivos(archivos) -> str:
     return hashlib.sha256(combinado).hexdigest()
 
 
+def guardar_fotos_carga(db: Client, carga_id: int, archivos) -> list[dict]:
+    imagenes = []
+    bucket = db.storage.from_("inventario-fotos")
+    for indice, archivo in enumerate(archivos, start=1):
+        nombre = re.sub(r"[^A-Za-z0-9._-]+", "_", archivo.name or "")
+        if not nombre:
+            nombre = f"imagen_{indice}.jpg"
+        ruta = f"{carga_id}/{indice}_{nombre}"
+        bucket.upload(
+            path=ruta,
+            file=archivo.getvalue(),
+            file_options={
+                "content-type": archivo.type or "image/jpeg",
+                "upsert": "false",
+            },
+        )
+        imagenes.append(
+            {
+                "ruta": ruta,
+                "nombre": archivo.name or nombre,
+                "tipo": archivo.type or "image/jpeg",
+            }
+        )
+    return imagenes
+
+
+def descargar_foto(ruta: str) -> bytes:
+    return cliente_supabase().storage.from_("inventario-fotos").download(ruta)
+
+
 def interpretar_imagenes(archivos) -> pd.DataFrame:
     api_key = secreto("OPENAI_API_KEY")
     if not api_key:
@@ -218,7 +248,7 @@ def combinar_observaciones(anterior: str | None, nueva: str | None) -> str:
     return " | ".join(dict.fromkeys(partes))
 
 
-def guardar_lote(tabla: pd.DataFrame, huella: str) -> None:
+def guardar_lote(tabla: pd.DataFrame, huella: str, archivos) -> None:
     db = cliente_supabase()
     ahora = datetime.now(timezone.utc).isoformat()
 
@@ -243,6 +273,14 @@ def guardar_lote(tabla: pd.DataFrame, huella: str) -> None:
     carga_id = int(carga.data[0]["id"])
 
     try:
+        imagenes = guardar_fotos_carga(db, carga_id, archivos)
+        (
+            db.table("cargas_inventario")
+            .update({"imagenes": imagenes})
+            .eq("id", carga_id)
+            .execute()
+        )
+
         for _, fila in tabla.iterrows():
             clave = clave_producto(fila)
             actual = (
@@ -336,7 +374,7 @@ def cargar_historial() -> tuple[list[dict], list[dict]]:
     db = cliente_supabase()
     cargas = (
         db.table("cargas_inventario")
-        .select("id,estado,creado_en,deshecho_en")
+        .select("id,estado,creado_en,deshecho_en,imagenes")
         .order("creado_en", desc=True)
         .execute()
     )
@@ -495,6 +533,7 @@ with tab_carga:
                     guardar_lote(
                         editada,
                         st.session_state.get("huella_lote", ""),
+                        archivos,
                     )
                     del st.session_state["lote"]
                     st.session_state.pop("huella_lote", None)
@@ -622,6 +661,23 @@ with tab_historial:
                 )
 
                 with st.expander(titulo, expanded=False):
+                    imagenes = carga.get("imagenes") or []
+                    if imagenes:
+                        st.caption("Fotos originales")
+                        columnas_fotos = st.columns(min(3, len(imagenes)))
+                        for indice, imagen in enumerate(imagenes):
+                            try:
+                                contenido_foto = descargar_foto(imagen["ruta"])
+                                columnas_fotos[indice % len(columnas_fotos)].image(
+                                    contenido_foto,
+                                    caption=imagen.get("nombre", "Imagen"),
+                                    width=240,
+                                )
+                            except Exception:
+                                columnas_fotos[indice % len(columnas_fotos)].warning(
+                                    "No se pudo abrir esta imagen."
+                                )
+
                     if detalle:
                         tabla_detalle = pd.DataFrame(detalle).rename(
                             columns={
