@@ -56,6 +56,7 @@ Categorías permitidas:
 
 Reglas:
 - Clasificá cada producto en la categoría más específica de la lista.
+- Clasificá los repuestos y accesorios de calefón como "Sanitarios", aunque el artefacto funcione con gas o electricidad.
 - No inventes texto ni cantidades.
 - Si se anota una cantidad de artículos individuales y no se menciona caja,
   paquete, rollo u otra presentación, usá "unidad".
