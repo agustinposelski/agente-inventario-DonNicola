@@ -1000,15 +1000,34 @@ with tab_precios:
             ]
             if not con_fuentes.empty:
                 st.subheader("Fuentes guardadas")
-                for _, fila in con_fuentes.iterrows():
-                    with st.expander(fila["Producto"]):
-                        for fuente in fila["Fuentes"]:
-                            texto_fuente = (
-                                f"- [{fuente.get('comercio', 'Fuente')}]"
-                                f"({fuente.get('url', '')}): "
-                                f"{formatear_ars(fuente.get('precio', 0))}"
-                            )
-                            st.markdown(texto_fuente)
+                categorias_fuentes = [
+                    categoria
+                    for categoria in CATEGORIES + extras
+                    if (con_fuentes["Categoría"] == categoria).any()
+                ]
+                for categoria in categorias_fuentes:
+                    st.markdown(f"### {categoria}")
+                    fuentes_categoria = con_fuentes[
+                        con_fuentes["Categoría"] == categoria
+                    ].sort_values(
+                        ["Producto", "Medida", "Variante"],
+                        key=lambda columna: columna.astype(str).str.lower(),
+                    )
+                    for _, fila in fuentes_categoria.iterrows():
+                        partes = [
+                            str(fila[campo]).strip()
+                            for campo in ["Producto", "Medida", "Variante"]
+                            if str(fila.get(campo, "")).strip()
+                        ]
+                        titulo_fuentes = " · ".join(partes)
+                        with st.expander(titulo_fuentes):
+                            for fuente in fila["Fuentes"]:
+                                texto_fuente = (
+                                    f"- [{fuente.get('comercio', 'Fuente')}]"
+                                    f"({fuente.get('url', '')}): "
+                                    f"{formatear_ars(fuente.get('precio', 0))}"
+                                )
+                                st.markdown(texto_fuente)
     except Exception as error:
         st.info(f"No se pudo cargar el análisis de precios: {error}")
 
