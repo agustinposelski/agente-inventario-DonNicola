@@ -19,7 +19,7 @@ alter table public.inventario enable row level security;
 
 -- La clave secreta del servidor omite RLS, pero igualmente necesita privilegios SQL.
 grant usage on schema public to service_role;
-grant select, insert, update on table public.inventario to service_role;
+grant select, insert, update, delete on table public.inventario to service_role;
 grant usage, select on sequence public.inventario_id_seq to service_role;
 
 -- La aplicación usa SUPABASE_SERVICE_KEY guardada como secreto del servidor.
