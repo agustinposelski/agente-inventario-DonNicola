@@ -8,6 +8,13 @@ create table if not exists public.inventario (
   cantidad numeric not null check (cantidad >= 0),
   unidad text not null default '',
   observaciones text not null default '',
+  precio_min numeric,
+  precio_referencia numeric,
+  precio_max numeric,
+  moneda text not null default 'ARS',
+  fuentes_precio jsonb not null default '[]'::jsonb,
+  precio_confianza text,
+  precio_actualizado_en timestamptz,
   actualizado_en timestamptz not null default now()
 );
 
@@ -93,4 +100,24 @@ on conflict (id) do update
 set public = false,
     file_size_limit = excluded.file_size_limit,
     allowed_mime_types = excluded.allowed_mime_types;
+
+-- Campos de referencias de precios online.
+alter table public.inventario
+  add column if not exists precio_min numeric,
+  add column if not exists precio_referencia numeric,
+  add column if not exists precio_max numeric,
+  add column if not exists moneda text not null default 'ARS',
+  add column if not exists fuentes_precio jsonb not null default '[]'::jsonb,
+  add column if not exists precio_confianza text,
+  add column if not exists precio_actualizado_en timestamptz;
+
+alter table public.inventario
+  drop constraint if exists inventario_precios_no_negativos;
+
+alter table public.inventario
+  add constraint inventario_precios_no_negativos check (
+    (precio_min is null or precio_min >= 0)
+    and (precio_referencia is null or precio_referencia >= 0)
+    and (precio_max is null or precio_max >= 0)
+  );
 
