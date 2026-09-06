@@ -427,7 +427,9 @@ with tab_inventario:
                         st.success("Productos eliminados.")
                         st.rerun()
 
-            inventario_ordenado = pd.concat(secciones, ignore_index=True)
+            inventario_ordenado = pd.concat(secciones, ignore_index=True).drop(
+                columns=["ID"], errors="ignore"
+            )
             st.download_button(
                 "Descargar inventario en CSV",
                 data=inventario_ordenado.to_csv(index=False).encode("utf-8-sig"),
