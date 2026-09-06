@@ -248,18 +248,40 @@ def guardar_lote(tabla: pd.DataFrame) -> None:
             db.table("inventario").insert(datos).execute()
 
 
+def actualizar_stock(tabla: pd.DataFrame) -> None:
+    db = cliente_supabase()
+    ahora = datetime.now(timezone.utc).isoformat()
+    for _, fila in tabla.iterrows():
+        cantidad = float(fila["Cantidad"])
+        if cantidad < 0:
+            raise ValueError("La cantidad no puede ser negativa.")
+        (
+            db.table("inventario")
+            .update({"cantidad": cantidad, "actualizado_en": ahora})
+            .eq("id", int(fila["ID"]))
+            .execute()
+        )
+
+
+def eliminar_productos(ids: list[int]) -> None:
+    db = cliente_supabase()
+    for identificador in ids:
+        db.table("inventario").delete().eq("id", int(identificador)).execute()
+
+
 def cargar_inventario() -> pd.DataFrame:
     db = cliente_supabase()
     respuesta = (
         db.table("inventario")
         .select(
-            "producto,categoria,medida,variante,cantidad,unidad,"
+            "id,producto,categoria,medida,variante,cantidad,unidad,"
             "observaciones,actualizado_en"
         )
         .order("producto")
         .execute()
     )
     columnas = {
+        "id": "ID",
         "producto": "Producto",
         "categoria": "Categoría",
         "medida": "Medida",
@@ -352,9 +374,58 @@ with tab_inventario:
                     ["Producto", "Medida", "Variante"],
                     key=lambda columna: columna.astype(str).str.lower(),
                 )
-                secciones.append(seccion)
+                secciones.append(seccion.copy())
+                seccion["Eliminar"] = False
+
                 st.subheader(f"{categoria} ({len(seccion)})")
-                st.dataframe(seccion, use_container_width=True, hide_index=True)
+                editada = st.data_editor(
+                    seccion,
+                    use_container_width=True,
+                    hide_index=True,
+                    key=f"editor_stock_{normalizar(categoria)}",
+                    disabled=[
+                        columna
+                        for columna in seccion.columns
+                        if columna not in ["Cantidad", "Eliminar"]
+                    ],
+                    column_config={
+                        "ID": None,
+                        "Cantidad": st.column_config.NumberColumn(
+                            "Cantidad",
+                            min_value=0.0,
+                            required=True,
+                            help="Modificá este valor para corregir el stock.",
+                        ),
+                        "Eliminar": st.column_config.CheckboxColumn(
+                            "Eliminar",
+                            help="Marcá únicamente los productos que quieras eliminar.",
+                        ),
+                    },
+                )
+
+                guardar, eliminar = st.columns(2)
+                with guardar:
+                    if st.button(
+                        "Guardar cantidades",
+                        key=f"guardar_{normalizar(categoria)}",
+                    ):
+                        actualizar_stock(editada)
+                        st.success(f"Stock de {categoria} actualizado.")
+                        st.rerun()
+
+                ids_eliminar = [
+                    int(valor)
+                    for valor in editada.loc[editada["Eliminar"], "ID"].tolist()
+                ]
+                with eliminar:
+                    if st.button(
+                        "Eliminar seleccionados",
+                        key=f"eliminar_{normalizar(categoria)}",
+                        disabled=not ids_eliminar,
+                    ):
+                        eliminar_productos(ids_eliminar)
+                        st.success("Productos eliminados.")
+                        st.rerun()
 
             inventario_ordenado = pd.concat(secciones, ignore_index=True)
             st.download_button(
@@ -364,4 +435,4 @@ with tab_inventario:
                 mime="text/csv",
             )
     except Exception as error:
-        st.info(f"El inventario online todavía no está configurado: {error}")
+        st.info(f"No se pudo cargar o modificar el inventario: {error}")
