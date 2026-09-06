@@ -666,19 +666,20 @@ st.markdown(
     """
     <style>
     :root {
-        --dn-navy: #2B2F43;
-        --dn-slate: #4A5E76;
-        --dn-gray: #BDC3C2;
+        --dn-ink: #263548;
+        --dn-burgundy: #5B3035;
+        --dn-coral: #D97771;
+        --dn-yellow: #F1E45C;
+        --dn-cream: #FFFDF0;
         --dn-white: #FFFFFF;
-        --dn-orange: #F4794A;
     }
     .stApp {
         background:
-            radial-gradient(circle at 100% 0%, rgba(244,121,74,.10), transparent 28rem),
-            linear-gradient(180deg, #f7f8f8 0%, #ffffff 34rem);
-        color: var(--dn-navy);
+            radial-gradient(circle at 100% 0%, rgba(241,228,92,.27), transparent 30rem),
+            linear-gradient(180deg, var(--dn-cream) 0%, #ffffff 36rem);
+        color: var(--dn-ink);
     }
-    [data-testid="stHeader"] { background: rgba(255,255,255,.72); }
+    [data-testid="stHeader"] { background: rgba(255,253,240,.82); }
     .block-container {
         max-width: 1500px;
         padding-top: 1.25rem;
@@ -686,133 +687,162 @@ st.markdown(
     }
     .dn-hero {
         position: relative;
-        min-height: 300px;
+        min-height: 320px;
         display: flex;
         align-items: center;
         overflow: hidden;
-        border-radius: 24px;
+        border: 5px solid var(--dn-ink);
+        border-radius: 18px;
         padding: 2.8rem 3rem;
         margin: .4rem 0 1.6rem;
         background-image:
-            linear-gradient(90deg, rgba(43,47,67,.98) 0%, rgba(43,47,67,.90) 38%, rgba(43,47,67,.18) 70%),
+            linear-gradient(90deg, rgba(241,228,92,.99) 0%, rgba(241,228,92,.96) 39%, rgba(241,228,92,.48) 58%, rgba(38,53,72,.08) 76%),
             url("https://raw.githubusercontent.com/agustinposelski/agente-inventario-DonNicola/main/assets/hero-ferreteria.jpg");
         background-size: cover;
         background-position: center;
-        box-shadow: 0 18px 48px rgba(43,47,67,.20);
-        border-bottom: 6px solid var(--dn-orange);
+        box-shadow: 9px 9px 0 rgba(91,48,53,.22);
     }
-    .dn-hero-content { position: relative; z-index: 1; max-width: 660px; }
+    .dn-hero::after {
+        content: "";
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 10px;
+        background: var(--dn-coral);
+    }
+    .dn-hero-content { position: relative; z-index: 1; max-width: 760px; }
     .dn-kicker {
         display: inline-block;
-        color: var(--dn-orange);
-        font-size: .78rem;
-        font-weight: 800;
-        letter-spacing: .16em;
+        padding: .42rem .75rem;
+        color: white;
+        background: var(--dn-ink);
+        border-radius: 4px;
+        font-size: .75rem;
+        font-weight: 900;
+        letter-spacing: .12em;
         text-transform: uppercase;
-        margin-bottom: .7rem;
+        margin-bottom: .9rem;
     }
     .dn-hero h1 {
-        color: white;
-        font-size: clamp(2.15rem, 5vw, 4.25rem);
-        line-height: .98;
-        letter-spacing: -.04em;
+        color: var(--dn-coral);
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(2.25rem, 5.2vw, 4.65rem);
+        font-weight: 900;
+        line-height: .94;
+        letter-spacing: .02em;
+        text-transform: uppercase;
+        -webkit-text-stroke: 2px var(--dn-ink);
+        text-shadow: 3px 3px 0 rgba(255,255,255,.72);
         margin: 0;
     }
     .dn-slogan {
-        color: white;
-        font-size: clamp(1.1rem, 2vw, 1.55rem);
-        font-weight: 500;
-        margin: .8rem 0 1.35rem;
+        display: inline-block;
+        color: var(--dn-ink);
+        font-size: clamp(1.05rem, 2vw, 1.45rem);
+        font-weight: 900;
+        font-style: italic;
+        margin: 1rem 0 1.25rem;
+        padding-bottom: .18rem;
+        border-bottom: 4px solid var(--dn-coral);
     }
-    .dn-badges { display: flex; flex-wrap: wrap; gap: .55rem; }
+    .dn-badges { display: flex; flex-wrap: wrap; gap: .45rem; }
     .dn-badge {
-        padding: .42rem .75rem;
+        padding: .4rem .7rem;
         color: white;
-        border: 1px solid rgba(255,255,255,.28);
-        background: rgba(74,94,118,.55);
-        backdrop-filter: blur(8px);
-        border-radius: 999px;
-        font-size: .82rem;
-        font-weight: 600;
+        border: 2px solid var(--dn-ink);
+        background: var(--dn-ink);
+        border-radius: 5px;
+        font-size: .77rem;
+        font-weight: 800;
+        letter-spacing: .02em;
+        text-transform: uppercase;
     }
     [data-testid="stTabs"] [data-baseweb="tab-list"] {
         gap: .45rem;
-        background: white;
-        padding: .45rem;
-        border: 1px solid #e6e9e8;
-        border-radius: 16px;
-        box-shadow: 0 8px 26px rgba(43,47,67,.08);
+        background: var(--dn-yellow);
+        padding: .5rem;
+        border: 3px solid var(--dn-ink);
+        border-radius: 12px;
+        box-shadow: 5px 5px 0 rgba(91,48,53,.18);
     }
     [data-testid="stTabs"] [data-baseweb="tab"] {
         height: 48px;
         padding: 0 1.15rem;
-        border-radius: 11px;
-        color: var(--dn-slate);
-        font-weight: 700;
+        border-radius: 7px;
+        color: var(--dn-ink);
+        font-weight: 800;
     }
     [data-testid="stTabs"] [aria-selected="true"] {
         color: white;
-        background: var(--dn-navy);
+        background: var(--dn-ink);
     }
     [data-testid="stTabs"] [data-baseweb="tab-highlight"] {
-        background-color: var(--dn-orange);
+        background-color: var(--dn-coral);
     }
     .dn-section-intro {
-        margin: 1.25rem 0 1rem;
+        margin: 1.35rem 0 1rem;
         padding: 1.1rem 1.3rem;
-        border-left: 5px solid var(--dn-orange);
-        border-radius: 0 14px 14px 0;
-        background: linear-gradient(90deg, rgba(189,195,194,.24), white);
+        border: 2px solid var(--dn-ink);
+        border-left: 8px solid var(--dn-coral);
+        border-radius: 8px;
+        background: linear-gradient(90deg, rgba(241,228,92,.42), white);
+        box-shadow: 4px 4px 0 rgba(38,53,72,.08);
     }
     .dn-section-intro strong {
         display: block;
-        color: var(--dn-navy);
+        color: var(--dn-ink);
         font-size: 1.15rem;
         margin-bottom: .15rem;
     }
-    .dn-section-intro span { color: var(--dn-slate); }
+    .dn-section-intro span { color: #475469; }
     [data-testid="stMetric"] {
         min-height: 112px;
         padding: 1rem 1.1rem;
         background: white;
-        border: 1px solid #e4e7e6;
-        border-top: 4px solid var(--dn-orange);
-        border-radius: 15px;
-        box-shadow: 0 8px 24px rgba(43,47,67,.07);
+        border: 2px solid var(--dn-ink);
+        border-top: 8px solid var(--dn-coral);
+        border-radius: 9px;
+        box-shadow: 5px 5px 0 rgba(241,228,92,.62);
     }
-    [data-testid="stMetricValue"] { color: var(--dn-navy); }
+    [data-testid="stMetricValue"] { color: var(--dn-burgundy); }
     [data-testid="stDataFrame"], [data-testid="stDataEditor"] {
         overflow: hidden;
-        border: 1px solid #e1e5e4;
-        border-radius: 15px;
-        box-shadow: 0 8px 24px rgba(43,47,67,.06);
+        border: 2px solid var(--dn-ink);
+        border-radius: 10px;
+        box-shadow: 5px 5px 0 rgba(241,228,92,.38);
     }
     .stButton > button, .stDownloadButton > button {
         min-height: 42px;
-        border-radius: 10px;
-        border-color: var(--dn-slate);
-        font-weight: 700;
+        border: 2px solid var(--dn-ink);
+        border-radius: 7px;
+        font-weight: 800;
+        box-shadow: 3px 3px 0 rgba(38,53,72,.12);
     }
     .stButton > button[kind="primary"] {
-        background: var(--dn-orange);
-        border-color: var(--dn-orange);
+        background: var(--dn-coral);
+        border-color: var(--dn-ink);
         color: white;
     }
     .stButton > button[kind="primary"]:hover {
-        background: #df6134;
-        border-color: #df6134;
+        background: var(--dn-burgundy);
+        border-color: var(--dn-ink);
     }
-    h2, h3 { color: var(--dn-navy); }
-    hr { border-color: #e6e9e8; }
+    h2, h3 { color: var(--dn-ink); }
+    h2 { border-bottom: 4px solid var(--dn-yellow); padding-bottom: .25rem; }
+    hr { border-color: rgba(38,53,72,.18); }
     @media (max-width: 760px) {
         .block-container { padding: .75rem .8rem 3rem; }
         .dn-hero {
-            min-height: 270px;
-            padding: 2rem 1.4rem;
-            background-position: 64% center;
+            min-height: 300px;
+            padding: 1.7rem 1.25rem;
+            background-position: 67% center;
+            border-width: 3px;
         }
-        .dn-hero-content { max-width: 86%; }
-        .dn-badge { font-size: .72rem; }
+        .dn-hero-content { max-width: 88%; }
+        .dn-hero h1 {
+            font-size: clamp(2rem, 12vw, 3.25rem);
+            -webkit-text-stroke: 1px var(--dn-ink);
+        }
+        .dn-badge { font-size: .66rem; }
         [data-testid="stTabs"] [data-baseweb="tab"] {
             padding: 0 .65rem;
             font-size: .78rem;
@@ -821,13 +851,14 @@ st.markdown(
     </style>
     <section class="dn-hero">
         <div class="dn-hero-content">
-            <span class="dn-kicker">Ferretería · Inventario inteligente</span>
+            <span class="dn-kicker">Ferretería de confianza</span>
             <h1>Ferretería<br>Don Nicola</h1>
-            <p class="dn-slogan">Nunca te abandona</p>
+            <p class="dn-slogan">“Nunca te abandona”</p>
             <div class="dn-badges">
-                <span class="dn-badge">🔧 Inventario ordenado</span>
-                <span class="dn-badge">📷 Carga desde fotos</span>
-                <span class="dn-badge">📊 Precios de referencia</span>
+                <span class="dn-badge">Pinturería</span>
+                <span class="dn-badge">Electricidad</span>
+                <span class="dn-badge">Bulonería</span>
+                <span class="dn-badge">Sanitarios</span>
             </div>
         </div>
     </section>
