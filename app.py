@@ -12,27 +12,58 @@ from supabase import Client, create_client
 
 
 MODEL = "gpt-5.6-terra"
+CATEGORIES = [
+    "Electricidad",
+    "Sanitarios",
+    "Pintura",
+    "Herramientas",
+    "Seguridad",
+    "Jardín",
+    "Gas",
+    "Construcción",
+    "Ferretería general",
+    "Otros",
+]
 COLUMNS = [
     "Producto",
+    "Categoría",
     "Medida",
     "Variante",
     "Cantidad",
     "Unidad",
     "Observaciones",
-    "Revisión manual",
+    "Requiere revisión",
 ]
 
 SYSTEM_PROMPT = """
 Sos el agente de inventario de la ferretería Don Nicola.
 Analizá todas las imágenes recibidas como un único lote semanal.
 
-Extraé una fila por cada producto y completá: producto, medida, variante,
-cantidad, unidad y observaciones.
+Extraé una fila por cada producto y completá: producto, categoría, medida,
+variante, cantidad, unidad y observaciones.
+
+Categorías permitidas:
+- Electricidad
+- Sanitarios
+- Pintura
+- Herramientas
+- Seguridad
+- Jardín
+- Gas
+- Construcción
+- Ferretería general
+- Otros
 
 Reglas:
-- No inventes texto, cantidades ni unidades.
-- Si un dato no se distingue, usá null para cantidad o "Revisión manual"
-  para texto, explicá la duda en observaciones y marcá requiere_revision=true.
+- Clasificá cada producto en la categoría más específica de la lista.
+- No inventes texto ni cantidades.
+- Si se anota una cantidad de artículos individuales y no se menciona caja,
+  paquete, rollo u otra presentación, usá "unidad".
+- Si un dato realmente no se distingue, usá null para cantidad o
+  "Revisión manual" para texto, explicá la duda en observaciones y marcá
+  requiere_revision=true.
+- No marques revisión solo porque la nota omite la palabra "unidad" cuando
+  claramente se están contando artículos individuales.
 - Separá productos con distinta medida, variante o unidad.
 - Unificá duplicados claros dentro del mismo lote sumando sus cantidades.
 - Conservá marcas y modelos cuando sean visibles.
@@ -42,6 +73,7 @@ Reglas:
 
 class ProductoExtraido(BaseModel):
     producto: str
+    categoria: str
     medida: str
     variante: str
     cantidad: float | None
@@ -138,15 +170,17 @@ def interpretar_imagenes(archivos) -> pd.DataFrame:
 
     filas = []
     for item in lote.productos:
+        categoria = item.categoria if item.categoria in CATEGORIES else "Otros"
         filas.append(
             {
                 "Producto": item.producto,
+                "Categoría": categoria,
                 "Medida": item.medida,
                 "Variante": item.variante,
                 "Cantidad": item.cantidad,
                 "Unidad": item.unidad,
                 "Observaciones": item.observaciones,
-                "Revisión manual": item.requiere_revision,
+                "Requiere revisión": item.requiere_revision,
             }
         )
     return pd.DataFrame(filas, columns=COLUMNS)
@@ -156,10 +190,12 @@ def validar_lote(tabla: pd.DataFrame) -> list[str]:
     errores = []
     for indice, fila in tabla.iterrows():
         numero = indice + 1
-        if bool(fila["Revisión manual"]):
+        if bool(fila["Requiere revisión"]):
             errores.append(f"Fila {numero}: todavía requiere revisión manual.")
         if not str(fila["Producto"]).strip():
             errores.append(f"Fila {numero}: falta el producto.")
+        if str(fila["Categoría"]).strip() not in CATEGORIES:
+            errores.append(f"Fila {numero}: seleccioná una categoría válida.")
         try:
             cantidad = float(fila["Cantidad"])
             if cantidad <= 0:
@@ -191,6 +227,7 @@ def guardar_lote(tabla: pd.DataFrame) -> None:
         datos = {
             "clave": clave,
             "producto": str(fila["Producto"]).strip(),
+            "categoria": str(fila["Categoría"]).strip(),
             "medida": str(fila["Medida"]).strip(),
             "variante": str(fila["Variante"]).strip(),
             "unidad": str(fila["Unidad"]).strip(),
@@ -214,12 +251,16 @@ def cargar_inventario() -> pd.DataFrame:
     db = cliente_supabase()
     respuesta = (
         db.table("inventario")
-        .select("producto,medida,variante,cantidad,unidad,observaciones,actualizado_en")
+        .select(
+            "producto,categoria,medida,variante,cantidad,unidad,"
+            "observaciones,actualizado_en"
+        )
         .order("producto")
         .execute()
     )
     columnas = {
         "producto": "Producto",
+        "categoria": "Categoría",
         "medida": "Medida",
         "variante": "Variante",
         "cantidad": "Cantidad",
@@ -261,6 +302,17 @@ with tab_carga:
             num_rows="dynamic",
             use_container_width=True,
             key="editor_lote",
+            column_config={
+                "Categoría": st.column_config.SelectboxColumn(
+                    "Categoría",
+                    options=CATEGORIES,
+                    required=True,
+                ),
+                "Requiere revisión": st.column_config.CheckboxColumn(
+                    "Requiere revisión",
+                    help="Desmarcá esta casilla después de corregir las dudas de la fila.",
+                ),
+            },
         )
         if st.button("Confirmar y sumar al inventario"):
             errores = validar_lote(editada)
