@@ -170,6 +170,20 @@ def normalizar(texto: object) -> str:
     return re.sub(r"\s+", " ", limpio)
 
 
+def limpiar_campo_inventario(valor: object, faltante: str = "Revisión manual") -> str:
+    texto = str(valor or "").strip()
+    if texto.lower() in {"", "nan", "none", "null"}:
+        return faltante
+    return texto
+
+
+def limpiar_observaciones(valor: object) -> str:
+    texto = str(valor or "").strip()
+    if texto.lower() in {"nan", "none", "null"}:
+        return ""
+    return texto
+
+
 def clave_producto(fila: pd.Series) -> str:
     campos = [fila["Producto"], fila["Medida"], fila["Variante"], fila["Unidad"]]
     return "|".join(normalizar(valor) for valor in campos)
@@ -254,16 +268,25 @@ def interpretar_imagenes(archivos) -> pd.DataFrame:
     filas = []
     for item in lote.productos:
         categoria = item.categoria if item.categoria in CATEGORIES else "Otros"
+        producto = limpiar_campo_inventario(item.producto)
+        medida = limpiar_campo_inventario(item.medida)
+        variante = limpiar_campo_inventario(item.variante)
+        unidad = limpiar_campo_inventario(item.unidad)
+        observaciones = limpiar_observaciones(item.observaciones)
+        requiere_revision = bool(item.requiere_revision) or any(
+            valor == "Revisión manual"
+            for valor in [producto, medida, variante, unidad]
+        )
         filas.append(
             {
-                "Producto": item.producto,
+                "Producto": producto,
                 "Categoría": categoria,
-                "Medida": item.medida,
-                "Variante": item.variante,
+                "Medida": medida,
+                "Variante": variante,
                 "Cantidad": item.cantidad,
-                "Unidad": item.unidad,
-                "Observaciones": item.observaciones,
-                "Requiere revisión": item.requiere_revision,
+                "Unidad": unidad,
+                "Observaciones": observaciones,
+                "Requiere revisión": requiere_revision,
             }
         )
     return pd.DataFrame(filas, columns=COLUMNS)
