@@ -387,7 +387,9 @@ def guardar_lote(tabla: pd.DataFrame, huella: str, archivos) -> None:
                 )
             else:
                 datos["cantidad"] = cantidad_nueva
-                datos["observaciones"] = str(fila["Observaciones"]).strip()
+                datos["observaciones"] = limpiar_observaciones(
+                    fila["Observaciones"]
+                )
                 db.table("inventario").insert(datos).execute()
 
             movimiento = {
@@ -399,7 +401,9 @@ def guardar_lote(tabla: pd.DataFrame, huella: str, archivos) -> None:
                 "variante": datos["variante"],
                 "cantidad_agregada": cantidad_nueva,
                 "unidad": datos["unidad"],
-                "observaciones": str(fila["Observaciones"]).strip(),
+                "observaciones": limpiar_observaciones(
+                    fila["Observaciones"]
+                ),
             }
             db.table("movimientos_inventario").insert(movimiento).execute()
     except Exception:
@@ -667,6 +671,11 @@ def cargar_precios() -> pd.DataFrame:
         tabla["Producto"] = tabla["Producto"].replace(
             {"Punta de cuerno": "Punta de guierro"}
         )
+    for columna in ["Medida", "Variante", "Unidad", "Observaciones"]:
+        if columna in tabla.columns:
+            tabla[columna] = tabla[columna].replace(
+                {"nan": "", "None": "", "null": ""}
+            )
     return tabla
 
 
@@ -784,6 +793,11 @@ def cargar_inventario() -> pd.DataFrame:
         tabla["Producto"] = tabla["Producto"].replace(
             {"Punta de cuerno": "Punta de guierro"}
         )
+    for columna in ["Medida", "Variante", "Unidad", "Observaciones"]:
+        if columna in tabla.columns:
+            tabla[columna] = tabla[columna].replace(
+                {"nan": "", "None": "", "null": ""}
+            )
     return tabla
 
 
@@ -1639,6 +1653,11 @@ with tab_historial:
                             tabla_detalle["Categoría"] = tabla_detalle[
                                 "Categoría"
                             ].replace({"Pintura": "Pinturería", "Jardín": "Jardinería"})
+                        for columna in ["Medida", "Variante", "Unidad", "Observaciones"]:
+                            if columna in tabla_detalle.columns:
+                                tabla_detalle[columna] = tabla_detalle[columna].replace(
+                                    {"nan": "", "None": "", "null": ""}
+                                )
                         st.dataframe(
                             tabla_detalle,
                             use_container_width=True,
