@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import math
 import os
 import re
 import statistics
@@ -280,10 +281,10 @@ def validar_lote(tabla: pd.DataFrame) -> list[str]:
             errores.append(f"Fila {numero}: seleccioná una categoría válida.")
         try:
             cantidad = float(fila["Cantidad"])
-            if cantidad <= 0:
+            if not math.isfinite(cantidad) or cantidad <= 0:
                 raise ValueError
         except (TypeError, ValueError):
-            errores.append(f"Fila {numero}: la cantidad debe ser mayor que cero.")
+            errores.append(f"Fila {numero}: la cantidad debe ser un número mayor que cero.")
     return errores
 
 
@@ -335,6 +336,10 @@ def guardar_lote(tabla: pd.DataFrame, huella: str, archivos) -> None:
                 .execute()
             )
             cantidad_nueva = float(fila["Cantidad"])
+            if not math.isfinite(cantidad_nueva) or cantidad_nueva <= 0:
+                raise ValueError(
+                    f"La cantidad de {fila['Producto']} debe ser un número mayor que cero."
+                )
             datos = {
                 "clave": clave,
                 "producto": str(fila["Producto"]).strip(),
