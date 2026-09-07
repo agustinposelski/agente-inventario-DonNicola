@@ -35,3 +35,20 @@ Primera versión creada. Falta configurar las claves privadas, crear la tabla de
 ## Seguridad
 
 Las claves se configuran como secretos de la aplicación. Nunca deben guardarse dentro del repositorio.
+
+## Contrato del agente
+
+El contrato está documentado y es utilizado por la aplicación:
+
+- `prompts/system_prompt.md`: rol, objetivo, categorías permitidas, reglas de evidencia, contrato de salida y supervisión humana.
+- `prompts/user_prompt.md`: instrucción para interpretar el lote semanal de imágenes.
+
+La aplicación carga estos archivos al iniciar. Si no estuvieran disponibles, conserva un texto de respaldo para evitar que la interfaz falle.
+
+## Supervisión humana L0-L4
+
+- **L0:** el agente propone la lectura y clasificación.
+- **L1:** una persona revisa y corrige los campos.
+- **L2:** una persona confirma antes de guardar el lote.
+- **L3:** una persona puede editar producto, categoría, medida, unidad y precio.
+- **L4:** la persona conserva la responsabilidad final sobre el inventario.
