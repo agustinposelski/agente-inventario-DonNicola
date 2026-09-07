@@ -4,6 +4,7 @@ import os
 import re
 import statistics
 import unicodedata
+from pathlib import Path
 from datetime import datetime, timezone
 
 import pandas as pd
@@ -73,6 +74,26 @@ Reglas:
 - Conservá marcas y modelos cuando sean visibles.
 - Si una imagen no contiene inventario, no generes filas ficticias.
 """.strip()
+
+
+BASE_DIR = Path(__file__).resolve().parent
+
+
+def cargar_prompt(ruta: Path, respaldo: str) -> str:
+    try:
+        return ruta.read_text(encoding="utf-8").strip()
+    except FileNotFoundError:
+        return respaldo
+
+
+SYSTEM_PROMPT = cargar_prompt(
+    BASE_DIR / "prompts" / "system_prompt.md",
+    SYSTEM_PROMPT,
+)
+USER_PROMPT = cargar_prompt(
+    BASE_DIR / "prompts" / "user_prompt.md",
+    "Interpretá las imágenes como un lote de inventario.",
+)
 
 
 class FuentePrecio(BaseModel):
@@ -203,7 +224,7 @@ def interpretar_imagenes(archivos) -> pd.DataFrame:
     contenido = [
         {
             "type": "input_text",
-            "text": "Interpretá estas imágenes y devolvé el lote de inventario.",
+            "text": USER_PROMPT,
         }
     ]
     for archivo in archivos:
