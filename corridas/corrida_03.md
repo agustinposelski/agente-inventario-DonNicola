@@ -2,8 +2,9 @@
 
 - **Fecha:** 07/09/2026 03:00 UTC
 - **Entrada:** una fotografía de anotaciones manuscritas del inventario, cargada desde la pestaña “Cargar imágenes”.
+- **Imagen de entrada:** [entrada_corrida_03.jpg](entrada_corrida_03.jpg)
 - **Proceso:** interpretación automática, revisión humana y confirmación antes de sumar al inventario acumulado.
-- **Resultado:** carga confirmada correctamente. No quedaron valores `nan`.
+- **Resultado:** carga confirmada correctamente. No quedaron valores nan.
 
 ## Salida estructurada
 
@@ -20,4 +21,4 @@
 | Hoja de sierra | Herramientas | 18 dientes | No indicada | 10 | unidad |
 | Kit reparación | Otros | No indicada | Bicicleta | 1 | unidad |
 
-La fotografía original queda conservada en el historial de cargas de la aplicación, asociada a la carga #19.
+La fotografía original también queda conservada en el historial de cargas de la aplicación.
