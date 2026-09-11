@@ -124,7 +124,7 @@ Se registraron tres evidencias:
 - Carga #19: una imagen, diez productos y resultado corregido.
 - Análisis de precios: balde de albañil, tres fuentes y precio de referencia.
 
-## Decisiones pendientes
+## Pendientes de entrega
 
 - Completar el análisis económico del uso del modelo.
 - Revisar la documentación final del README.
