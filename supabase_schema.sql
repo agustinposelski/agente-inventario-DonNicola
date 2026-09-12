@@ -207,7 +207,8 @@ begin
     variante text,
     cantidad numeric,
     unidad text,
-    observaciones text
+    observaciones text,
+    ubicacion text
   )
   group by x.clave
   on conflict (clave) do update
