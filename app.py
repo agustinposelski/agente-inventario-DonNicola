@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import json
 import math
 import os
 import re
@@ -349,63 +350,30 @@ def guardar_lote(tabla: pd.DataFrame, huella: str, archivos) -> None:
             .execute()
         )
 
+        productos = []
         for _, fila in tabla.iterrows():
             clave = clave_producto(fila)
-            actual = (
-                db.table("inventario")
-                .select("id,cantidad,observaciones")
-                .eq("clave", clave)
-                .limit(1)
-                .execute()
-            )
             cantidad_nueva = float(fila["Cantidad"])
             if not math.isfinite(cantidad_nueva) or cantidad_nueva <= 0:
                 raise ValueError(
                     f"La cantidad de {fila['Producto']} debe ser un número mayor que cero."
                 )
-            datos = {
+            productos.append({
                 "clave": clave,
                 "producto": str(fila["Producto"]).strip(),
                 "categoria": str(fila["Categoría"]).strip(),
                 "medida": str(fila["Medida"]).strip(),
                 "variante": str(fila["Variante"]).strip(),
+                "cantidad": cantidad_nueva,
                 "unidad": str(fila["Unidad"]).strip(),
-                "actualizado_en": ahora,
-            }
+                "observaciones": limpiar_observaciones(fila["Observaciones"]),
+            })
 
-            if actual.data:
-                registro = actual.data[0]
-                datos["cantidad"] = float(registro["cantidad"]) + cantidad_nueva
-                datos["observaciones"] = combinar_observaciones(
-                    registro.get("observaciones"), fila["Observaciones"]
-                )
-                (
-                    db.table("inventario")
-                    .update(datos)
-                    .eq("id", registro["id"])
-                    .execute()
-                )
-            else:
-                datos["cantidad"] = cantidad_nueva
-                datos["observaciones"] = limpiar_observaciones(
-                    fila["Observaciones"]
-                )
-                db.table("inventario").insert(datos).execute()
-
-            movimiento = {
-                "carga_id": carga_id,
-                "clave": clave,
-                "producto": datos["producto"],
-                "categoria": datos["categoria"],
-                "medida": datos["medida"],
-                "variante": datos["variante"],
-                "cantidad_agregada": cantidad_nueva,
-                "unidad": datos["unidad"],
-                "observaciones": limpiar_observaciones(
-                    fila["Observaciones"]
-                ),
-            }
-            db.table("movimientos_inventario").insert(movimiento).execute()
+        # La función SQL ejecuta movimientos e inventario en una única transacción.
+        db.rpc(
+            "aplicar_lote_atomico",
+            {"p_carga_id": carga_id, "p_productos": json.loads(json.dumps(productos))},
+        ).execute()
     except Exception:
         (
             db.table("cargas_inventario")
@@ -1681,4 +1649,3 @@ with tab_historial:
                             st.rerun()
     except Exception as error:
         st.info(f"No se pudo cargar el historial: {error}")
-
