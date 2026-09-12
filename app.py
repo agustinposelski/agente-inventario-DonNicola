@@ -180,15 +180,39 @@ def normalizar(texto: object) -> str:
     return re.sub(r"\s+", " ", limpio)
 
 
+def reparar_mojibake(valor: object) -> object:
+    """Corrige texto UTF-8 interpretado accidentalmente como Latin-1."""
+    if not isinstance(valor, str):
+        return valor
+    texto = valor
+    for _ in range(2):
+        if not any(marca in texto for marca in ("Ã", "Â", "â", "�")):
+            break
+        try:
+            reparado = texto.encode("latin1").decode("utf-8")
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            break
+        if reparado == texto:
+            break
+        texto = reparado
+    return texto
+
+
+def reparar_texto_tabla(tabla: pd.DataFrame) -> pd.DataFrame:
+    for columna in tabla.select_dtypes(include=["object"]).columns:
+        tabla[columna] = tabla[columna].map(reparar_mojibake)
+    return tabla
+
+
 def limpiar_campo_inventario(valor: object, faltante: str = "Revisión manual") -> str:
-    texto = str(valor or "").strip()
+    texto = str(reparar_mojibake(valor) or "").strip()
     if texto.lower() in {"", "nan", "none", "null"}:
         return faltante
     return texto
 
 
 def limpiar_observaciones(valor: object) -> str:
-    texto = str(valor or "").strip()
+    texto = str(reparar_mojibake(valor) or "").strip()
     if texto.lower() in {"nan", "none", "null"}:
         return ""
     return texto
@@ -649,6 +673,7 @@ def cargar_precios() -> pd.DataFrame:
         "precio_actualizado_en": "Precio actualizado",
     }
     tabla = pd.DataFrame(respuesta.data).rename(columns=columnas)
+    tabla = reparar_texto_tabla(tabla)
     if "Categoría" in tabla.columns:
         tabla["Categoría"] = tabla["Categoría"].replace(
             {"Pintura": "Pinturería", "Jardín": "Jardinería"}
@@ -772,6 +797,7 @@ def cargar_inventario() -> pd.DataFrame:
         "actualizado_en": "Última actualización",
     }
     tabla = pd.DataFrame(respuesta.data).rename(columns=columnas)
+    tabla = reparar_texto_tabla(tabla)
     if "Categoría" in tabla.columns:
         tabla["Categoría"] = tabla["Categoría"].replace(
             {"Pintura": "Pinturería", "Jardín": "Jardinería"}
@@ -1696,7 +1722,8 @@ with tab_historial:
                                 )
 
                     if detalle:
-                        tabla_detalle = pd.DataFrame(detalle).rename(
+                        tabla_detalle = reparar_texto_tabla(
+                            pd.DataFrame(detalle).rename(
                             columns={
                                 "producto": "Producto",
                                 "categoria": "Categoría",
@@ -1707,6 +1734,7 @@ with tab_historial:
                                 "observaciones": "Observaciones",
                                 "ubicacion": "Ubicación",
                             }
+                            )
                         )
                         tabla_detalle = tabla_detalle.drop(
                             columns=["carga_id"], errors="ignore"
