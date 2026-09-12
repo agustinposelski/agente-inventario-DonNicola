@@ -21,6 +21,24 @@ Se realizaron tres corridas reales:
 
 La cuenta de OpenAI fue cargada inicialmente con **USD 5**. El consumo exacto debe verificarse en el panel de uso, porque depende de la cantidad y resolución de las imágenes, los tokens enviados y la respuesta generada.
 
+## Medición real observada
+
+Según el panel de Usage de OpenAI, para el proyecto y período seleccionado:
+
+| Métrica | Valor |
+|---|---:|
+| Modelo | gpt-5.6-terra |
+| Solicitudes | 43 |
+| Tokens de entrada | 467.299 |
+| Tokens de salida | 47.993 |
+| Tokens totales | 515.292 |
+| Gasto total mostrado | USD 1,83 |
+| Búsquedas web | 36 solicitudes |
+
+Estos datos permiten calcular un promedio observado de aproximadamente **USD 0,0426 por solicitud** (USD 1,83 / 43). El promedio incluye las solicitudes de interpretación y de búsqueda de precios del período seleccionado; el panel no permite atribuir ese gasto a cada corrida individual desde esta vista.
+
+El promedio observado de tokens es de aproximadamente 10.867 tokens de entrada y 1.116 tokens de salida por solicitud. Estos valores son más representativos que el supuesto inicial de USD 0,10 semanal, aunque deben actualizarse cuando se mida exclusivamente el uso de la aplicación.
+
 ## Fórmula de costo
 
 Para cada corrida:
