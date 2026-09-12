@@ -780,6 +780,12 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+HERO_IMAGE_PATH = BASE_DIR / "assets" / "hero-ferreteria.jpg"
+try:
+    HERO_IMAGE_URL = "data:image/jpeg;base64," + base64.b64encode(HERO_IMAGE_PATH.read_bytes()).decode("ascii")
+except OSError:
+    HERO_IMAGE_URL = ""
+
 st.markdown(
     """
     <style>
@@ -822,7 +828,7 @@ st.markdown(
         margin: .4rem 0 1.6rem;
         background-image:
             linear-gradient(90deg, rgba(241,228,92,.99) 0%, rgba(241,228,92,.96) 39%, rgba(241,228,92,.48) 58%, rgba(38,53,72,.08) 76%),
-            url("https://raw.githubusercontent.com/agustinposelski/agente-inventario-DonNicola/main/assets/hero-ferreteria.jpg");
+            url("__HERO_IMAGE__");
         background-size: cover;
         background-position: center;
         box-shadow: 9px 9px 0 rgba(91,48,53,.22);
@@ -1054,7 +1060,7 @@ st.markdown(
             </div>
         </div>
     </section>
-    """,
+    """.replace("__HERO_IMAGE__", HERO_IMAGE_URL),
     unsafe_allow_html=True,
 )
 
