@@ -114,3 +114,8 @@ Las evidencias están en [corridas/](corridas/):
 Las claves de OpenAI y Supabase se configuran como secretos del despliegue. No deben guardarse en el código, prompts, README, capturas ni commits públicos.
 
 Las fotografías originales se conservan en el historial protegido de la aplicación y no forman parte del repositorio público.
+
+
+## Ubicación física
+
+Cada carga se asigna a una ubicación mediante un selector antes de interpretar las imágenes. Las opciones disponibles son **Pasillo**, **Galpón** y **Nonna**. La ubicación se guarda en el inventario, en el historial de movimientos y se puede modificar posteriormente desde el editor del inventario. La migración incluida en [infra/supabase_schema.sql](infra/supabase_schema.sql) asigna **Pasillo** por defecto a los productos existentes.
