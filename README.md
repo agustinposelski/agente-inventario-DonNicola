@@ -14,8 +14,9 @@ Reducir la transcripción manual del inventario de la ferretería. El usuario ca
 2. GPT-5.6 Terra interpreta el lote completo.
 3. Revisar y corregir la tabla.
 4. Confirmar la carga.
-5. Sumar cantidades al inventario online.
-6. Consultar el inventario acumulado y descargarlo como CSV.
+5. Guardar el lote de forma transaccional: si falla una operación, no se aplican cambios parciales.
+6. Sumar cantidades al inventario online.
+7. Consultar el inventario acumulado y descargarlo como CSV.
 7. Seleccionar productos para consultar precios online y calcular un precio de referencia.
 
 El inventario es acumulativo. Un producto se considera repetido cuando coinciden producto, medida, variante y unidad.
@@ -51,6 +52,7 @@ La aplicación permite:
 - Interfaz: Streamlit.
 - Modelo: OpenAI Responses API con GPT-5.6 Terra.
 - Almacenamiento: Supabase.
+- Persistencia: función SQL transaccional para evitar actualizaciones parciales.
 - Repositorio: GitHub.
 - Despliegue: Streamlit Cloud.
 - Acceso: contraseña personal.
