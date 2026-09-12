@@ -144,8 +144,10 @@ def autenticar() -> bool:
     if st.session_state.get("autenticado"):
         return True
 
-    st.subheader("Acceso personal")
-    clave = st.text_input("Contraseña", type="password")
+    with st.container(border=True):
+        st.subheader("Acceso personal")
+        st.caption("Ingresá la contraseña configurada para abrir el inventario.")
+        clave = st.text_input("Contraseña", type="password", placeholder="Escribí tu contraseña aquí")
     if st.button("Ingresar", type="primary"):
         clave_configurada = secreto("APP_PASSWORD")
         if clave_configurada and clave == clave_configurada:
@@ -993,6 +995,20 @@ st.markdown(
     h2, h3 {
         color: var(--dn-coral) !important;
     }
+    div[data-testid="stVerticalBlockBorderWrapper"] {
+        border: 2px solid var(--dn-ink) !important;
+        border-radius: 10px !important;
+        background: #FFFFFF !important;
+        padding: .85rem 1rem .45rem !important;
+        box-shadow: 4px 4px 0 rgba(38,53,72,.10);
+        margin: .65rem 0 1rem;
+    }
+    div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stTextInput"] input,
+    div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stSelectbox"] [data-baseweb="select"] > div {
+        border: 2px solid var(--dn-ink) !important;
+        border-radius: 7px !important;
+        background: #FFFFFF !important;
+    }
     [data-testid="stFileUploader"] {
         padding: 1rem;
         background: white;
@@ -1095,12 +1111,15 @@ with tab_carga:
         '<span>Subí las fotos de tus anotaciones y revisá los datos antes de sumarlos.</span></div>',
         unsafe_allow_html=True,
     )
-    ubicacion_lote = st.selectbox(
-        "¿En qué ubicación están los productos de estas imágenes?",
-        LOCATIONS,
-        key="ubicacion_lote",
-        help="Elegí el sector que corresponde a todas las imágenes de esta carga.",
-    )
+    with st.container(border=True):
+        st.markdown("#### Ubicación de esta carga")
+        st.caption("Elegí dónde están físicamente los productos de todas las imágenes que vas a cargar.")
+        ubicacion_lote = st.selectbox(
+            "Sector",
+            LOCATIONS,
+            key="ubicacion_lote",
+            help="La selección se aplicará a todos los productos de esta carga.",
+        )
     archivos = st.file_uploader(
         "Arrastrá y soltá aquí una o varias imágenes del inventario",
         type=["png", "jpg", "jpeg", "webp"],
