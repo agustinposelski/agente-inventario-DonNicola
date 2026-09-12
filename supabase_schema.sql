@@ -23,6 +23,21 @@ create table if not exists public.inventario (
 alter table public.inventario
   add column if not exists categoria text not null default 'Otros';
 
+-- Ubicación física: se asigna Pasillo por defecto a los registros existentes.
+alter table public.inventario
+  add column if not exists ubicacion text not null default 'Pasillo';
+
+alter table public.inventario
+  drop constraint if exists inventario_ubicacion_valida;
+
+alter table public.inventario
+  add constraint inventario_ubicacion_valida
+  check (ubicacion in ('Pasillo', 'Galpón', 'Nonna'));
+
+update public.inventario
+set ubicacion = 'Pasillo'
+where ubicacion is null or btrim(ubicacion) = '';
+
 alter table public.inventario enable row level security;
 
 grant usage on schema public to service_role;
@@ -65,6 +80,21 @@ create index if not exists movimientos_inventario_carga_idx
 
 alter table public.cargas_inventario enable row level security;
 alter table public.movimientos_inventario enable row level security;
+
+-- La ubicación también queda registrada en cada movimiento histórico.
+alter table public.movimientos_inventario
+  add column if not exists ubicacion text not null default 'Pasillo';
+
+alter table public.movimientos_inventario
+  drop constraint if exists movimientos_ubicacion_valida;
+
+alter table public.movimientos_inventario
+  add constraint movimientos_ubicacion_valida
+  check (ubicacion in ('Pasillo', 'Galpón', 'Nonna'));
+
+update public.movimientos_inventario
+set ubicacion = 'Pasillo'
+where ubicacion is null or btrim(ubicacion) = '';
 
 grant select, insert, update, delete
   on table public.cargas_inventario to service_role;
