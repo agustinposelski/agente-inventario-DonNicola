@@ -1447,12 +1447,9 @@ with tab_precios:
                             "Referencia: "
                             + formatear_ars(resultado["precio_referencia"])
                         )
-                        st.write(
-                            "Rango: "
-                            + formatear_ars(resultado["precio_min"])
-                            + " – "
-                            + formatear_ars(resultado["precio_max"])
-                        )
+                        rango_min = formatear_ars(resultado["precio_min"]).replace("$", "\\$")
+                        rango_max = formatear_ars(resultado["precio_max"]).replace("$", "\\$")
+                        st.markdown(f"Rango: {rango_min} – {rango_max}")
                         st.write(f"Confianza: {resultado['precio_confianza']}")
                         if resultado.get("observaciones"):
                             st.caption(resultado["observaciones"])
