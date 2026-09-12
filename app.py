@@ -1326,11 +1326,25 @@ with tab_inventario:
                         st.rerun()
 
             inventario_ordenado = pd.concat(secciones, ignore_index=True).drop(
-                columns=["ID"], errors="ignore"
+                columns=["ID", "Eliminar"], errors="ignore"
             )
+            orden_categoria = {
+                categoria: indice for indice, categoria in enumerate(CATEGORIES)
+            }
+            inventario_ordenado["_orden_categoria"] = inventario_ordenado[
+                "Categoría"
+            ].map(orden_categoria).fillna(len(CATEGORIES))
+            inventario_ordenado = inventario_ordenado.sort_values(
+                ["_orden_categoria", "Producto", "Medida", "Variante"],
+                key=lambda columna: columna.astype(str).str.lower(),
+            ).drop(columns=["_orden_categoria"])
             st.download_button(
                 "Descargar inventario en CSV",
-                data=inventario_ordenado.to_csv(index=False).encode("utf-8-sig"),
+                data=inventario_ordenado.to_csv(
+                    index=False,
+                    sep=";",
+                    encoding="utf-8-sig",
+                ),
                 file_name="inventario_don_nicola.csv",
                 mime="text/csv",
             )
