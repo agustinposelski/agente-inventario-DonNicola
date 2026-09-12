@@ -623,7 +623,7 @@ def cargar_precios() -> pd.DataFrame:
         cliente_supabase()
         .table("inventario")
         .select(
-            "id,producto,categoria,medida,variante,cantidad,precio_min,"
+            "id,producto,categoria,medida,variante,cantidad,ubicacion,precio_min,"
             "precio_referencia,precio_max,moneda,fuentes_precio,"
             "precio_confianza,precio_actualizado_en"
         )
@@ -637,6 +637,7 @@ def cargar_precios() -> pd.DataFrame:
         "medida": "Medida",
         "variante": "Variante",
         "cantidad": "Cantidad",
+        "ubicacion": "Ubicación",
         "precio_min": "Precio mínimo",
         "precio_referencia": "Precio referencia",
         "precio_max": "Precio máximo",
