@@ -8,6 +8,7 @@ create table if not exists public.inventario (
   cantidad numeric not null check (cantidad >= 0),
   unidad text not null default '',
   observaciones text not null default '',
+  ubicacion text not null default 'Pasillo' check (ubicacion in ('Pasillo', 'Galpón', 'Nonna')),
   precio_min numeric,
   precio_referencia numeric,
   precio_max numeric,
@@ -129,7 +130,7 @@ begin
 
   insert into movimientos_inventario (
     carga_id, clave, producto, categoria, medida, variante,
-    cantidad_agregada, unidad, observaciones
+    cantidad_agregada, unidad, observaciones, ubicacion
   )
   select
     p_carga_id,
@@ -140,7 +141,8 @@ begin
     coalesce(x.variante, ''),
     x.cantidad,
     coalesce(x.unidad, ''),
-    coalesce(x.observaciones, '')
+    coalesce(x.observaciones, ''),
+    coalesce(x.ubicacion, 'Pasillo')
   from jsonb_to_recordset(p_productos) as x(
     clave text,
     producto text,
@@ -149,12 +151,13 @@ begin
     variante text,
     cantidad numeric,
     unidad text,
-    observaciones text
+    observaciones text,
+    ubicacion text
   );
 
   insert into inventario (
     clave, producto, categoria, medida, variante,
-    cantidad, unidad, observaciones
+    cantidad, unidad, observaciones, ubicacion
   )
   select
     x.clave,
@@ -164,7 +167,8 @@ begin
     max(coalesce(x.variante, '')),
     sum(x.cantidad),
     max(coalesce(x.unidad, '')),
-    max(coalesce(x.observaciones, ''))
+    max(coalesce(x.observaciones, '')),
+    max(coalesce(x.ubicacion, 'Pasillo'))
   from jsonb_to_recordset(p_productos) as x(
     clave text,
     producto text,
@@ -178,6 +182,7 @@ begin
   group by x.clave
   on conflict (clave) do update
   set cantidad = inventario.cantidad + excluded.cantidad,
+      ubicacion = excluded.ubicacion,
       actualizado_en = now();
 end;
 $$;
