@@ -106,6 +106,14 @@ Se normalizaron valores nulos y no finitos para evitar que aparezca `nan` en pan
 
 Esta decisión surgió al revisar la carga #18 y se verificó en la carga #19.
 
+### 14. Guardado transaccional
+
+Se reemplazó el guardado fila por fila por una función SQL transaccional llamada aplicar_lote_atomico.
+
+**Motivo:** si falla una inserción o actualización, la base revierte todo el lote y evita un inventario parcialmente actualizado.
+
+La integración se verificó con una nueva carga confirmada correctamente desde la aplicación.
+
 ## Supervisión humana
 
 El flujo definido es:
