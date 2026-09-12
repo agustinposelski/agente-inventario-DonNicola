@@ -60,7 +60,7 @@ Las fotografías pueden contener información del negocio. Por eso no deben comp
 | Fuente online no comparable | Comparación engañosa | Registrar observaciones y excluir variantes no equivalentes. |
 | Duplicación de una carga | Stock inflado | Revisar el historial antes de confirmar y conservar fecha/lote. |
 | Clave expuesta | Uso no autorizado y costo inesperado | Secretos fuera del repositorio y rotación inmediata ante sospecha. |
-| Caída de OpenAI o Supabase | El proceso no termina | Mostrar error, no guardar parcialmente y reintentar con revisión. |
+| Caída de OpenAI o Supabase | El proceso no termina | Mostrar error; la función SQL transaccional revierte cambios del lote y permite reintentar con revisión. |
 | Imagen privada compartida públicamente | Exposición de información | Mantener las fotos en el almacenamiento protegido y no subirlas al repositorio. |
 
 ## Supervisión humana L0–L4
