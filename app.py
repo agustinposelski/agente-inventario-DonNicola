@@ -1009,6 +1009,28 @@ st.markdown(
         border-radius: 7px !important;
         background: #FFFFFF !important;
     }
+    @keyframes dn-gear-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    [data-testid="stSpinner"] svg,
+    .stSpinner svg {
+        display: none !important;
+    }
+    [data-testid="stSpinner"]::before,
+    .stSpinner::before {
+        content: "⚙";
+        display: inline-block;
+        color: var(--dn-coral);
+        font-size: 2rem;
+        line-height: 1;
+        animation: dn-gear-spin 1s linear infinite;
+        transform-origin: center;
+    }
+    [data-testid="stSpinner"] > div,
+    .stSpinner > div {
+        border-top-color: var(--dn-coral) !important;
+    }
     [data-testid="stFileUploader"] {
         padding: 1rem;
         background: white;
