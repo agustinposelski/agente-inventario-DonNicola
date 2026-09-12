@@ -17,6 +17,8 @@ from supabase import Client, create_client
 
 
 MODEL = "gpt-5.6-terra"
+LOCATIONS = ["Pasillo", "Galpón", "Nonna"]
+
 CATEGORIES = [
     "Electricidad",
     "Sanitarios",
@@ -38,6 +40,7 @@ COLUMNS = [
     "Cantidad",
     "Unidad",
     "Observaciones",
+    "Ubicación",
     "Requiere revisión",
 ]
 
@@ -236,7 +239,7 @@ def descargar_foto(ruta: str) -> bytes:
     return cliente_supabase().storage.from_("inventario-fotos").download(ruta)
 
 
-def interpretar_imagenes(archivos) -> pd.DataFrame:
+def interpretar_imagenes(archivos, ubicacion: str) -> pd.DataFrame:
     api_key = secreto("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError("Falta configurar OPENAI_API_KEY.")
@@ -291,6 +294,7 @@ def interpretar_imagenes(archivos) -> pd.DataFrame:
                 "Cantidad": item.cantidad,
                 "Unidad": unidad,
                 "Observaciones": observaciones,
+                "Ubicación": ubicacion,
                 "Requiere revisión": requiere_revision,
             }
         )
@@ -307,6 +311,8 @@ def validar_lote(tabla: pd.DataFrame) -> list[str]:
             errores.append(f"Fila {numero}: falta el producto.")
         if str(fila["Categoría"]).strip() not in CATEGORIES:
             errores.append(f"Fila {numero}: seleccioná una categoría válida.")
+        if str(fila["Ubicación"]).strip() not in LOCATIONS:
+            errores.append(f"Fila {numero}: seleccioná una ubicación válida.")
         try:
             cantidad = float(fila["Cantidad"])
             if not math.isfinite(cantidad) or cantidad <= 0:
@@ -371,6 +377,7 @@ def guardar_lote(tabla: pd.DataFrame, huella: str, archivos) -> None:
                 "cantidad": cantidad_nueva,
                 "unidad": str(fila["Unidad"]).strip(),
                 "observaciones": limpiar_observaciones(fila["Observaciones"]),
+                "ubicacion": str(fila["Ubicación"]).strip(),
             })
 
         # La función SQL ejecuta movimientos e inventario en una única transacción.
@@ -405,8 +412,11 @@ def actualizar_stock(tabla: pd.DataFrame) -> None:
             raise ValueError("La cantidad no puede ser negativa.")
 
         categoria = str(fila["Categoría"]).strip()
+        ubicacion = str(fila["Ubicación"]).strip()
         if categoria not in CATEGORIES:
             raise ValueError("Seleccioná una categoría válida.")
+        if ubicacion not in LOCATIONS:
+            raise ValueError("Seleccioná una ubicación válida.")
 
         precio_texto = str(fila.get("Precio de referencia", "") or "").strip()
         if precio_texto.lower() in {"", "—", "nan", "none"}:
@@ -459,6 +469,7 @@ def actualizar_stock(tabla: pd.DataFrame) -> None:
             "unidad": unidad,
             "cantidad": cantidad,
             "categoria": categoria,
+            "ubicacion": ubicacion,
             "actualizado_en": ahora,
         }
         if precio_cambio:
@@ -663,7 +674,7 @@ def cargar_historial() -> tuple[list[dict], list[dict]]:
         db.table("movimientos_inventario")
         .select(
             "carga_id,producto,categoria,medida,variante,"
-            "cantidad_agregada,unidad,observaciones"
+            "cantidad_agregada,unidad,observaciones,ubicacion"
         )
         .order("producto")
         .execute()
@@ -739,7 +750,7 @@ def cargar_inventario() -> pd.DataFrame:
         db.table("inventario")
         .select(
             "id,producto,categoria,medida,variante,cantidad,unidad,"
-            "observaciones,precio_referencia,actualizado_en"
+            "observaciones,ubicacion,precio_referencia,actualizado_en"
         )
         .order("producto")
         .execute()
@@ -753,6 +764,7 @@ def cargar_inventario() -> pd.DataFrame:
         "cantidad": "Cantidad",
         "unidad": "Unidad",
         "observaciones": "Observaciones",
+        "ubicacion": "Ubicación",
         "precio_referencia": "Precio de referencia",
         "actualizado_en": "Última actualización",
     }
@@ -1082,6 +1094,12 @@ with tab_carga:
         '<span>Subí las fotos de tus anotaciones y revisá los datos antes de sumarlos.</span></div>',
         unsafe_allow_html=True,
     )
+    ubicacion_lote = st.selectbox(
+        "¿En qué ubicación están los productos de estas imágenes?",
+        LOCATIONS,
+        key="ubicacion_lote",
+        help="Elegí el sector que corresponde a todas las imágenes de esta carga.",
+    )
     archivos = st.file_uploader(
         "Arrastrá y soltá aquí una o varias imágenes del inventario",
         type=["png", "jpg", "jpeg", "webp"],
@@ -1093,7 +1111,7 @@ with tab_carga:
     if st.button("Interpretar imágenes", type="primary", disabled=not archivos):
         try:
             with st.spinner("Interpretando el inventario..."):
-                st.session_state["lote"] = interpretar_imagenes(archivos)
+                st.session_state["lote"] = interpretar_imagenes(archivos, ubicacion_lote)
                 st.session_state["huella_lote"] = huella_archivos(archivos)
         except Exception as error:
             st.error(f"No se pudo interpretar el lote: {error}")
@@ -1109,6 +1127,11 @@ with tab_carga:
                 "Categoría": st.column_config.SelectboxColumn(
                     "Categoría",
                     options=CATEGORIES,
+                    required=True,
+                ),
+                "Ubicación": st.column_config.SelectboxColumn(
+                    "Ubicación",
+                    options=LOCATIONS,
                     required=True,
                 ),
                 "Requiere revisión": st.column_config.CheckboxColumn(
@@ -1189,6 +1212,7 @@ with tab_inventario:
                         not in [
                             "Producto",
                             "Categoría",
+                            "Ubicación",
                             "Cantidad",
                             "Unidad",
                             "Precio de referencia",
@@ -1207,6 +1231,12 @@ with tab_inventario:
                             options=CATEGORIES,
                             required=True,
                             help="Cambiá la categoría y guardá para mover el producto.",
+                        ),
+                        "Ubicación": st.column_config.SelectboxColumn(
+                            "Ubicación",
+                            options=LOCATIONS,
+                            required=True,
+                            help="Elegí dónde está físicamente el producto.",
                         ),
                         "Cantidad": st.column_config.NumberColumn(
                             "Cantidad",
@@ -1622,6 +1652,7 @@ with tab_historial:
                                 "cantidad_agregada": "Cantidad agregada",
                                 "unidad": "Unidad",
                                 "observaciones": "Observaciones",
+                                "ubicacion": "Ubicación",
                             }
                         )
                         tabla_detalle = tabla_detalle.drop(
