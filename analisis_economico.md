@@ -99,3 +99,16 @@ Supabase se utiliza en el plan gratuito para esta primera versión personal. Deb
 ## Conclusión
 
 El proyecto es económicamente viable para un uso personal y semanal, siempre que se controle el consumo real. El próximo control recomendado es registrar por separado el costo de diez corridas de inventario y diez revisiones de precios, y actualizar esta documentación con datos observados, reemplazando los supuestos de planificación por valores reales.
+
+
+## Evidencia primaria del 7 de septiembre de 2026
+
+La captura [evidencia_consumo_2026-09-07.png](corridas/evidencia_consumo_2026-09-07.png) respalda el consumo visible en el panel de Usage para esa fecha:
+
+- Cache writes: **USD 0,07**
+- Input: **USD 0,03**
+- Output: **USD 0,12**
+- Web search: **USD 0,02**
+- Total acumulado mostrado por el panel: **USD 1,83**
+
+Esta captura acredita el consumo diario del período, pero no permite separar con precisión qué importe correspondió exclusivamente a la corrida #19, porque el mismo día pudo incluir otras solicitudes.
