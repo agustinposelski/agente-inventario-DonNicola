@@ -21,3 +21,11 @@
 | Flexible de cobre | Sanitarios | 40 cm | 3/4" | 2 | unidad | — |
 
 La carga quedó conservada en el historial de la aplicación con sus cinco fotografías originales.
+
+## Imágenes de entrada
+
+- [Imagen 1](entrada_corrida_02_01.jpeg)
+- [Imagen 2](entrada_corrida_02_02.jpeg)
+- [Imagen 3](entrada_corrida_02_03.jpeg)
+- [Imagen 4](entrada_corrida_02_04.jpeg)
+- [Imagen 5](entrada_corrida_02_05.jpeg)
